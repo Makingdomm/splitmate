@@ -18,7 +18,7 @@ import Toast from './components/Toast.jsx';
 
 export default function App() {
   const { initUser, fetchGroups, fetchPaymentStatus, loading, error, clearError } = useAppStore();
-  const [page, setPage] = useState('groups');    // Current page
+  const [page, setPage] = useState('groups');
   const [initialized, setInitialized] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -26,7 +26,22 @@ export default function App() {
   useEffect(() => {
     const init = async () => {
       initUser();
-      await Promise.all([fetchGroups(), fetchPaymentStatus()]);
+
+      // Tell Telegram the app is ready (expands and shows the UI)
+      const tg = window.Telegram?.WebApp;
+      if (tg) {
+        tg.ready();
+        tg.expand();
+      }
+
+      try {
+        await Promise.all([fetchGroups(), fetchPaymentStatus()]);
+      } catch (err) {
+        // Silently ignore auth errors on initial load —
+        // they happen when initData is not yet ready. The app still renders.
+        console.warn('Init fetch failed (likely no initData yet):', err.message);
+      }
+
       setInitialized(true);
     };
     init();
@@ -35,20 +50,25 @@ export default function App() {
     const tg = window.Telegram?.WebApp;
     if (tg) {
       const root = document.documentElement;
-      root.style.setProperty('--tg-bg',          tg.backgroundColor || '#ffffff');
-      root.style.setProperty('--tg-secondary-bg', tg.secondaryBackgroundColor || '#f4f4f5');
-      root.style.setProperty('--tg-text',         tg.themeParams?.text_color || '#000000');
-      root.style.setProperty('--tg-hint',         tg.themeParams?.hint_color || '#999999');
-      root.style.setProperty('--tg-link',         tg.themeParams?.link_color || '#2481cc');
-      root.style.setProperty('--tg-button',       tg.themeParams?.button_color || '#2481cc');
+      root.style.setProperty('--tg-bg',          tg.backgroundColor || '#18181b');
+      root.style.setProperty('--tg-secondary-bg', tg.secondaryBackgroundColor || '#27272a');
+      root.style.setProperty('--tg-text',         tg.themeParams?.text_color || '#ffffff');
+      root.style.setProperty('--tg-hint',         tg.themeParams?.hint_color || '#a1a1aa');
+      root.style.setProperty('--tg-link',         tg.themeParams?.link_color || '#6366f1');
+      root.style.setProperty('--tg-button',       tg.themeParams?.button_color || '#6366f1');
       root.style.setProperty('--tg-button-text',  tg.themeParams?.button_text_color || '#ffffff');
     }
   }, []);
 
-  // Show toast when errors occur
+  // Show toast when non-auth errors occur (skip Unauthorized errors)
   useEffect(() => {
     if (error) {
-      setToast({ type: 'error', message: error });
+      const isAuthError = error.toLowerCase().includes('unauthorized') ||
+                          error.toLowerCase().includes('missing auth') ||
+                          error.toLowerCase().includes('pattern');
+      if (!isAuthError) {
+        setToast({ type: 'error', message: error });
+      }
       clearError();
     }
   }, [error]);

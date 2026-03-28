@@ -1,36 +1,42 @@
 // =============================================================================
 // store/appStore.js — Global app state with Zustand
-// Keeps groups, active group, expenses, and user Pro status in sync
 // =============================================================================
 
 import { create } from 'zustand';
 import api from '../utils/api.js';
 
+const isAuthError = (err) =>
+  err?.status === 401 ||
+  err?.message?.toLowerCase().includes('unauthorized') ||
+  err?.message?.toLowerCase().includes('pattern');
+
 const useAppStore = create((set, get) => ({
-  // ── State ──────────────────────────────────────────────────────────────────
-  user:          null,    // Telegram user object from WebApp
-  groups:        [],      // User's expense groups
-  activeGroup:   null,    // Currently selected group
-  expenses:      [],      // Expenses for active group
-  balances:      null,    // Balance/debt data for active group
-  paymentStatus: null,    // Pro subscription status
+  user:          null,
+  groups:        [],
+  activeGroup:   null,
+  expenses:      [],
+  balances:      null,
+  paymentStatus: null,
   loading:       false,
   error:         null,
 
-  // ── User ───────────────────────────────────────────────────────────────────
   initUser: () => {
     const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-    set({ user: tgUser });
+    set({ user: tgUser || null });
   },
 
-  // ── Groups ─────────────────────────────────────────────────────────────────
   fetchGroups: async () => {
     set({ loading: true, error: null });
     try {
       const { groups } = await api.groups.list();
       set({ groups, loading: false });
     } catch (err) {
-      set({ error: err.message, loading: false });
+      // Don't show auth errors as toasts — just silently show empty state
+      if (isAuthError(err)) {
+        set({ groups: [], loading: false });
+      } else {
+        set({ error: err.message, loading: false });
+      }
     }
   },
 
@@ -59,10 +65,8 @@ const useAppStore = create((set, get) => ({
     return result;
   },
 
-  // ── Expenses ───────────────────────────────────────────────────────────────
   addExpense: async (data) => {
     const result = await api.expenses.add(data);
-    // Refresh expenses and balances after adding
     const activeGroup = get().activeGroup;
     if (activeGroup) {
       await get().setActiveGroup(activeGroup);
@@ -93,27 +97,26 @@ const useAppStore = create((set, get) => ({
     }
   },
 
-  // ── Payments ───────────────────────────────────────────────────────────────
   fetchPaymentStatus: async () => {
     try {
       const status = await api.payments.status();
       set({ paymentStatus: status });
       return status;
     } catch (err) {
-      console.error('Failed to fetch payment status:', err);
+      // Silently ignore auth errors on payment status fetch
+      if (!isAuthError(err)) {
+        console.error('Failed to fetch payment status:', err);
+      }
     }
   },
 
   upgradeToProMessage: async () => {
-    // Sends invoice via bot — user completes payment in Telegram
     await api.payments.upgrade();
-    // Show hint to check Telegram chat
     window.Telegram?.WebApp?.showAlert(
       '✅ Invoice sent! Check your Telegram chat to complete payment with Stars.'
     );
   },
 
-  // ── UI helpers ─────────────────────────────────────────────────────────────
   clearError: () => set({ error: null }),
 }));
 
