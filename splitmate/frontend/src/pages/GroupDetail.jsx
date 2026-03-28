@@ -27,6 +27,25 @@ export default function GroupDetail({ onNavigate, onToast }) {
     onNavigate('settle');
   };
 
+  const handleExport = async () => {
+    if (!paymentStatus?.isPro) { onNavigate('pro'); return; }
+    try {
+      const API = import.meta.env.VITE_API_URL || '';
+      const token = window.Telegram?.WebApp?.initData || localStorage.getItem('tg_init_data') || '';
+      const resp = await fetch(`${API}/api/expenses/${activeGroup.id}/export`, {
+        headers: { 'x-telegram-init-data': token },
+      });
+      if (!resp.ok) { const e = await resp.json(); throw new Error(e.message || 'Export failed'); }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `splitmate-${activeGroup.name}.csv`;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+      onToast('CSV downloaded! 📊');
+    } catch (err) { onToast(err.message, 'error'); }
+  };
+
   const formatDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const myId = user?.id;
 
@@ -84,6 +103,15 @@ export default function GroupDetail({ onNavigate, onToast }) {
           }}
           title="Invite"
         >🔗</button>
+        <button
+          onClick={handleExport}
+          style={{
+            width:36, height:36, borderRadius:12, border:'1px solid rgba(34,197,94,0.3)',
+            background:'rgba(34,197,94,0.1)', color:'#22c55e', fontSize:14,
+            cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+          }}
+          title="Export CSV"
+        >📊</button>
       </div>
 
       {/* ── Tab Bar ── */}

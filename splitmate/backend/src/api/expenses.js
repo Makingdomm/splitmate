@@ -143,3 +143,44 @@ export default async function expenseRoutes(fastify) {
     }
   });
 }
+
+  // ── GET /api/expenses/:groupId/export — CSV export (Pro only) ─────────────
+  fastify.get('/:groupId/export', async (req, reply) => {
+    const { groupId } = req.params;
+
+    const member = await isMember(groupId, req.user.telegram_id);
+    if (!member) return reply.code(403).send({ error: 'Not a member of this group' });
+
+    const isPro = await isProUser(req.user.telegram_id);
+    if (!isPro) return reply.code(403).send({ error: 'PRO_REQUIRED', message: 'CSV export is a Pro feature.' });
+
+    // Fetch all expenses (no limit)
+    const { data, error } = await (await import('../db/client.js')).supabase
+      .from('expenses')
+      .select(`
+        id, description, amount, currency, amount_usd, category, split_type, created_at,
+        users!paid_by (full_name, username),
+        expense_splits (amount_owed, is_settled, users (full_name))
+      `)
+      .eq('group_id', groupId)
+      .order('created_at', { ascending: true });
+
+    if (error) return reply.code(500).send({ error: error.message });
+
+    // Build CSV
+    const rows = [];
+    rows.push(['Date', 'Description', 'Category', 'Amount', 'Currency', 'Amount (USD)', 'Paid By', 'Split Type', 'Settled'].join(','));
+
+    for (const exp of data || []) {
+      const paidBy = exp.users?.full_name || exp.users?.username || 'Unknown';
+      const settled = exp.expense_splits?.every(s => s.is_settled) ? 'Yes' : 'No';
+      const date = new Date(exp.created_at).toISOString().split('T')[0];
+      const desc = `"${(exp.description || '').replace(/"/g, '""')}"`;
+      rows.push([date, desc, exp.category, exp.amount, exp.currency, exp.amount_usd, `"${paidBy}"`, exp.split_type, settled].join(','));
+    }
+
+    const csv = rows.join('\n');
+    reply.header('Content-Type', 'text/csv');
+    reply.header('Content-Disposition', `attachment; filename="splitmate-${groupId}.csv"`);
+    return reply.send(csv);
+  });
