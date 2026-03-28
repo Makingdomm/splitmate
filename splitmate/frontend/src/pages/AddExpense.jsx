@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import useAppStore from '../store/appStore.js';
 import api from '../utils/api.js';
 
@@ -31,7 +31,10 @@ export default function AddExpense({ onNavigate, onToast }) {
     currency: activeGroup?.currency || 'USD',
     category: 'general', paidBy: user?.id?.toString() || '', splitType: 'equal',
   });
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting]   = useState(false);
+  const [scanning, setScanning]       = useState(false);
+  const [scanResult, setScanResult]   = useState(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!activeGroup) return;
@@ -40,6 +43,47 @@ export default function AddExpense({ onNavigate, onToast }) {
   }, [activeGroup]);
 
   const set = (field, value) => setForm(p => ({ ...p, [field]: value }));
+
+  // Convert file to base64
+  const fileToBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const handleScanReceipt = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check Pro
+    if (!paymentStatus?.isPro) { onNavigate('pro'); return; }
+
+    setScanning(true);
+    setScanResult(null);
+    try {
+      const base64 = await fileToBase64(file);
+      const mimeType = file.type || 'image/jpeg';
+      const { data } = await api.receipts.scan(base64, mimeType);
+
+      // Auto-fill form
+      setForm(prev => ({
+        ...prev,
+        description: data.merchant || prev.description,
+        amount: data.total ? data.total.toString() : prev.amount,
+        currency: data.currency || prev.currency,
+        category: data.category || prev.category,
+      }));
+      setScanResult(data);
+      onToast(`✅ Receipt scanned — ${data.merchant || 'details filled in'}!`);
+    } catch (err) {
+      if (err.code === 'PRO_REQUIRED') { onNavigate('pro'); return; }
+      onToast(err.message || 'Could not read receipt. Try a clearer photo.', 'error');
+    } finally {
+      setScanning(false);
+      e.target.value = '';
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -59,24 +103,62 @@ export default function AddExpense({ onNavigate, onToast }) {
 
   return (
     <div style={{ minHeight:'100vh', background:'linear-gradient(180deg,#060818 0%,#0a0f2e 40%,#060818 100%)', paddingBottom:40, position:'relative', overflow:'hidden' }}>
-      <style>{`.form-inp:focus{border-color:rgba(79,142,247,0.5)!important;background:rgba(79,142,247,0.08)!important;} .cat-btn:active{transform:scale(0.93);} .split-opt:active{transform:scale(0.96);}`}</style>
+      <style>{`.form-inp:focus{border-color:rgba(79,142,247,0.5)!important;background:rgba(79,142,247,0.08)!important;} .cat-btn:active{transform:scale(0.93);} .split-opt:active{transform:scale(0.96);} .scan-btn:active{transform:scale(0.97);}`}</style>
       <div style={{ position:'absolute', top:-60, left:'50%', transform:'translateX(-50%)', width:340, height:340, background:'radial-gradient(circle,rgba(59,110,246,0.13) 0%,transparent 65%)', borderRadius:'50%', pointerEvents:'none' }} />
 
       {/* Header */}
       <div style={{ display:'flex', alignItems:'center', gap:12, padding:'20px 16px 20px', position:'relative', zIndex:1 }}>
         <button onClick={() => onNavigate('group-detail')} style={{ width:36, height:36, borderRadius:12, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.06)', color:'#a0b0e0', fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>‹</button>
-        <div>
+        <div style={{ flex:1 }}>
           <h1 style={{ fontSize:20, fontWeight:900, color:'#fff', letterSpacing:-0.3 }}>Add Expense</h1>
           <p style={{ fontSize:12, color:'#4a5080' }}>{activeGroup.name}</p>
         </div>
+        {/* Scan Receipt button */}
+        <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display:'none' }} onChange={handleScanReceipt} />
+        <button
+          type="button"
+          className="scan-btn"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={scanning}
+          style={{
+            height:36, padding:'0 14px', borderRadius:12,
+            border:'1px solid rgba(245,176,30,0.3)',
+            background: scanning ? 'rgba(245,176,30,0.05)' : 'rgba(245,176,30,0.1)',
+            color: scanning ? '#7a6020' : '#f5b01e',
+            fontSize:12, fontWeight:700, cursor:'pointer',
+            display:'flex', alignItems:'center', gap:6, flexShrink:0,
+            transition:'all 0.2s',
+          }}
+        >
+          {scanning ? '⏳' : '📷'} {scanning ? 'Scanning…' : 'Scan'}{!paymentStatus?.isPro && ' ⭐'}
+        </button>
       </div>
+
+      {/* Scan result preview */}
+      {scanResult && (
+        <div style={{ margin:'0 16px 16px', padding:'12px 16px', borderRadius:14, background:'rgba(34,197,94,0.08)', border:'1px solid rgba(34,197,94,0.2)', position:'relative', zIndex:1 }}>
+          <div style={{ fontSize:12, fontWeight:700, color:'#22c55e', marginBottom:6 }}>✅ Receipt scanned</div>
+          {scanResult.items?.length > 0 && (
+            <div style={{ fontSize:12, color:'#4a7060' }}>
+              {scanResult.items.slice(0,3).map((item, i) => (
+                <div key={i}>{item.name} — {scanResult.currency} {item.amount}</div>
+              ))}
+              {scanResult.items.length > 3 && <div>+{scanResult.items.length - 3} more items</div>}
+            </div>
+          )}
+          <div style={{ fontSize:11, color:'#2a4030', marginTop:4 }}>
+            Confidence: {Math.round((scanResult.confidence || 0) * 100)}%
+            {scanResult.date && ` · ${scanResult.date}`}
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} style={{ padding:'0 16px', position:'relative', zIndex:1 }}>
 
         {/* Description */}
         <div style={{ marginBottom:16 }}>
           <label style={{ fontSize:11, fontWeight:700, color:'#3d4870', textTransform:'uppercase', letterSpacing:0.8, display:'block', marginBottom:8 }}>What was it for?</label>
-          <input className="form-inp" style={inp} type="text" placeholder="e.g. Dinner, Uber, Hotel…" value={form.description} onChange={e => set('description', e.target.value)} maxLength={200} autoFocus />
+          <input className="form-inp" style={inp} type="text" placeholder="e.g. Dinner, Uber, Hotel…" value={form.description} onChange={e => set('description', e.target.value)} maxLength={200} />
         </div>
 
         {/* Amount + Currency */}
@@ -125,13 +207,11 @@ export default function AddExpense({ onNavigate, onToast }) {
 
         {/* Split method */}
         <div style={{ marginBottom:24 }}>
-          <label style={{ fontSize:11, fontWeight:700, color:'#3d4870', textTransform:'uppercase', letterSpacing:0.8, display:'block', marginBottom:10 }}>
-            Split method
-          </label>
+          <label style={{ fontSize:11, fontWeight:700, color:'#3d4870', textTransform:'uppercase', letterSpacing:0.8, display:'block', marginBottom:10 }}>Split method</label>
           <div style={{ display:'flex', gap:8 }}>
             {[
-              { key:'equal', label:'÷ Equal', pro:false },
-              { key:'custom', label:'# Custom', pro:true },
+              { key:'equal',      label:'÷ Equal',   pro:false },
+              { key:'custom',     label:'# Custom',  pro:true },
               { key:'percentage', label:'% Percent', pro:true },
             ].map(opt => {
               const active = form.splitType === opt.key;

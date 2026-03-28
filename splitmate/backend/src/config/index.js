@@ -31,6 +31,7 @@ export const config = {
   REDIS_URL:              optional('REDIS_URL', ''),
   REDIS_TOKEN:            optional('REDIS_TOKEN', ''),
   OPENAI_API_KEY:         optional('OPENAI_API_KEY', ''),
+  GEMINI_API_KEY:         optional('GEMINI_API_KEY', ''),
   EXCHANGE_RATES_API_KEY: optional('EXCHANGE_RATES_API_KEY', ''),
   PRO_MONTHLY_STARS:      parseInt(optional('PRO_MONTHLY_STARS', '500'), 10),
   TON_FEE_PERCENT:        parseFloat(optional('TON_FEE_PERCENT', '0.5')),

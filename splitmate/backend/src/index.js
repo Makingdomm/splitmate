@@ -13,6 +13,7 @@ import { authMiddleware, webhookMiddleware } from './middleware/auth.js';
 import groupRoutes from './api/groups.js';
 import expenseRoutes from './api/expenses.js';
 import paymentRoutes from './api/payments.js';
+import receiptRoutes from './api/receipts.js';
 import cron from 'node-cron';
 import { sendDebtReminders } from './bot/reminders.js';
 
@@ -87,6 +88,7 @@ fastify.register(async (instance) => {
   instance.register(groupRoutes,   { prefix: '/api/groups' });
   instance.register(expenseRoutes, { prefix: '/api/expenses' });
   instance.register(paymentRoutes, { prefix: '/api/payments' });
+  instance.register(receiptRoutes, { prefix: '/api/receipts' });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

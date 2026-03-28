@@ -67,6 +67,9 @@ export const api = {
   },
 
   // Payments
+  receipts: {
+    scan: (image, mimeType) => request('POST', '/api/receipts/scan', { image, mimeType }),
+  },
   payments: {
     status:     ()     => request('GET',  '/api/payments/status'),
     upgrade:    (starsAmount) => request('POST', '/api/payments/invoice', { starsAmount }),
