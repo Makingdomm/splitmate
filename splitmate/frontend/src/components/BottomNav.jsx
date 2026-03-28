@@ -2,7 +2,7 @@ import React from 'react';
 
 const NAV_ITEMS = [
   { page: 'groups', icon: '👥', label: 'Groups' },
-  { page: 'pro',    icon: '⭐', label: 'Pro' },
+  { page: 'pro',    icon: '⭐', label: 'Pro', isPro: true },
 ];
 
 export default function BottomNav({ currentPage, onNavigate }) {
@@ -11,7 +11,7 @@ export default function BottomNav({ currentPage, onNavigate }) {
       {NAV_ITEMS.map(item => (
         <button
           key={item.page}
-          className={`nav-item ${currentPage === item.page ? 'active' : ''}`}
+          className={`nav-item ${item.isPro ? 'pro-nav' : ''} ${currentPage === item.page ? 'active' : ''}`}
           onClick={() => onNavigate(item.page)}
         >
           <span className="nav-icon">{item.icon}</span>
