@@ -19,14 +19,15 @@ export const config = {
   BOT_SECRET:   required('BOT_SECRET'),
   MINI_APP_URL: required('MINI_APP_URL'),
 
-  // Supabase (new — HTTP-based connection)
+  // Supabase — HTTP-based (no direct PG connection needed)
   SUPABASE_PROJECT_REF: optional('SUPABASE_PROJECT_REF', 'ikcnjzqoaebczfojqdsg'),
   SUPABASE_SERVICE_KEY: required('SUPABASE_SERVICE_KEY'),
+  SUPABASE_ANON_KEY:    optional('SUPABASE_ANON_KEY', ''),
 
-  // Keep DATABASE_URL optional (legacy)
+  // Legacy (kept for reference, not used for connection)
   DATABASE_URL: optional('DATABASE_URL', ''),
 
-  // Optional extras
+  // Optional
   REDIS_URL:              optional('REDIS_URL', ''),
   REDIS_TOKEN:            optional('REDIS_TOKEN', ''),
   OPENAI_API_KEY:         optional('OPENAI_API_KEY', ''),
