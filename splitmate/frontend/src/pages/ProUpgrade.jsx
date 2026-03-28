@@ -41,7 +41,7 @@ export default function ProUpgrade({ onToast }) {
   const handleUpgrade = async () => {
     setLoading(true);
     try {
-      await api.payments.upgrade();
+      await api.payments.upgrade(tier.price);
       setInvoiceSent(true);
     } catch (err) {
       onToast('Failed to send invoice. Try again.', 'error');

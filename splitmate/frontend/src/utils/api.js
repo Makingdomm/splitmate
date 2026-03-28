@@ -69,7 +69,7 @@ export const api = {
   // Payments
   payments: {
     status:     ()     => request('GET',  '/api/payments/status'),
-    upgrade:    ()     => request('POST', '/api/payments/invoice'),
+    upgrade:    (starsAmount) => request('POST', '/api/payments/invoice', { starsAmount }),
     currencies: ()     => request('GET',  '/api/payments/currencies'),
   },
 };
