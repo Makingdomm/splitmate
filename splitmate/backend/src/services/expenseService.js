@@ -1,297 +1,138 @@
-// =============================================================================
-// services/expenseService.js — Expense creation, splitting, and balance math
-// This is the core financial engine of SplitMate
-// =============================================================================
-
-import { query, transaction } from '../db/client.js';
+import { supabase } from '../db/client.js';
 import { getExchangeRate } from './currencyService.js';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// addExpense — Create an expense and calculate splits
-//
-// splitData format for 'equal':    null (auto-split among all members)
-// splitData format for 'custom':   [{ userId, amount }]
-// splitData format for 'percentage': [{ userId, percentage }]
-// ─────────────────────────────────────────────────────────────────────────────
-export const addExpense = async ({
-  groupId,
-  paidBy,
-  amount,
-  currency,
-  description,
-  category = 'general',
-  splitType = 'equal',
-  splitData = null,
-  memberIds,       // Array of telegram_ids of all group members to split among
-}) => {
-  return await transaction(async (client) => {
-    // Convert amount to USD for normalized calculations
-    const exchangeRate = await getExchangeRate(currency, 'USD');
-    const amountUsd = parseFloat((amount * exchangeRate).toFixed(2));
+export const addExpense = async ({ groupId, paidBy, amount, currency, description, category = 'general', splitType = 'equal', splitData = null, memberIds }) => {
+  const exchangeRate = await getExchangeRate(currency, 'USD');
+  const amountUsd = parseFloat((amount * exchangeRate).toFixed(2));
 
-    // Insert the expense record
-    const expenseResult = await client.query(
-      `INSERT INTO expenses
-         (group_id, paid_by, amount, currency, amount_usd, description, category, split_type)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING *`,
-      [groupId, paidBy, amount, currency, amountUsd, description, category, splitType]
-    );
-    const expense = expenseResult.rows[0];
+  const { data: expense, error: eErr } = await supabase
+    .from('expenses')
+    .insert({ group_id: groupId, paid_by: paidBy, amount, currency, amount_usd: amountUsd, description, category, split_type: splitType })
+    .select()
+    .single();
+  if (eErr) throw new Error(eErr.message);
 
-    // ── Calculate splits ────────────────────────────────────────────────────
-    const splits = calculateSplits({
-      expense,
-      splitType,
-      splitData,
-      memberIds,
-      paidBy,
-    });
+  const splits = calculateSplits({ expense, splitType, splitData, memberIds, paidBy });
 
-    // Insert split records for each member
-    for (const split of splits) {
-      await client.query(
-        `INSERT INTO expense_splits (expense_id, user_id, amount_owed)
-         VALUES ($1, $2, $3)`,
-        [expense.id, split.userId, split.amountOwed]
-      );
-    }
+  const splitRows = splits.map(s => ({ expense_id: expense.id, user_id: s.userId, amount_owed: s.amountOwed }));
+  const { error: sErr } = await supabase.from('expense_splits').insert(splitRows);
+  if (sErr) throw new Error(sErr.message);
 
-    return { expense, splits };
-  });
+  return { expense, splits };
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// calculateSplits — Pure function that returns split amounts per user
-// The payer's own split is recorded as 0 (they already paid)
-// ─────────────────────────────────────────────────────────────────────────────
 const calculateSplits = ({ expense, splitType, splitData, memberIds, paidBy }) => {
   const splits = [];
-
   if (splitType === 'equal') {
-    // Divide equally among all members
     const perPerson = parseFloat((expense.amount / memberIds.length).toFixed(2));
-
-    // Handle rounding: add/subtract remainder to payer's share
-    const remainder = parseFloat(
-      (expense.amount - perPerson * memberIds.length).toFixed(2)
-    );
-
+    const remainder = parseFloat((expense.amount - perPerson * memberIds.length).toFixed(2));
     memberIds.forEach((userId, index) => {
-      let amount = perPerson;
-      if (index === 0) amount = parseFloat((amount + remainder).toFixed(2));
-      splits.push({
-        userId,
-        // Payer owes 0 to themselves for this expense
-        amountOwed: userId === paidBy ? 0 : amount,
-      });
+      let amt = perPerson;
+      if (index === 0) amt = parseFloat((amt + remainder).toFixed(2));
+      splits.push({ userId, amountOwed: userId === paidBy ? 0 : amt });
     });
-
   } else if (splitType === 'custom') {
-    // splitData: [{ userId, amount }]
     splitData.forEach(({ userId, amount }) => {
-      splits.push({
-        userId,
-        amountOwed: userId === paidBy ? 0 : parseFloat(amount.toFixed(2)),
-      });
+      splits.push({ userId, amountOwed: userId === paidBy ? 0 : parseFloat(amount.toFixed(2)) });
     });
-
   } else if (splitType === 'percentage') {
-    // splitData: [{ userId, percentage }]
     splitData.forEach(({ userId, percentage }) => {
-      const amountOwed = parseFloat(
-        ((expense.amount * percentage) / 100).toFixed(2)
-      );
-      splits.push({
-        userId,
-        amountOwed: userId === paidBy ? 0 : amountOwed,
-      });
+      const amountOwed = parseFloat(((expense.amount * percentage) / 100).toFixed(2));
+      splits.push({ userId, amountOwed: userId === paidBy ? 0 : amountOwed });
     });
   }
-
   return splits;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// getGroupExpenses — Paginated expense list for a group
-// ─────────────────────────────────────────────────────────────────────────────
 export const getGroupExpenses = async (groupId, limit = 20, offset = 0) => {
-  const result = await query(
-    `SELECT
-       e.*,
-       u.full_name AS paid_by_name,
-       u.username  AS paid_by_username,
-       json_agg(json_build_object(
-         'user_id',    es.user_id,
-         'amount_owed', es.amount_owed,
-         'is_settled', es.is_settled,
-         'full_name',  su.full_name
-       )) AS splits
-     FROM expenses e
-     JOIN users u ON u.telegram_id = e.paid_by
-     LEFT JOIN expense_splits es ON es.expense_id = e.id
-     LEFT JOIN users su ON su.telegram_id = es.user_id
-     WHERE e.group_id = $1
-     GROUP BY e.id, u.full_name, u.username
-     ORDER BY e.created_at DESC
-     LIMIT $2 OFFSET $3`,
-    [groupId, limit, offset]
-  );
-  return result.rows;
+  const { data, error } = await supabase
+    .from('expenses')
+    .select(`
+      *,
+      users!paid_by (full_name, username),
+      expense_splits (user_id, amount_owed, is_settled, users (full_name))
+    `)
+    .eq('group_id', groupId)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+  if (error) throw new Error(error.message);
+  return data;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// getGroupBalances — The simplified debt graph for a group
-// Returns: who owes how much to whom (minimized transactions algorithm)
-// ─────────────────────────────────────────────────────────────────────────────
 export const getGroupBalances = async (groupId) => {
-  // Step 1: Get raw per-user net balances
-  const result = await query(
-    `SELECT
-       u.telegram_id,
-       u.full_name,
-       u.username,
-       u.ton_wallet,
-       -- Amount user paid for others (money coming in)
-       COALESCE(SUM(CASE WHEN e.paid_by = u.telegram_id AND es.user_id != u.telegram_id AND es.is_settled = FALSE
-                    THEN es.amount_owed ELSE 0 END), 0) AS total_paid_for_others,
-       -- Amount user owes to others (money going out)
-       COALESCE(SUM(CASE WHEN es.user_id = u.telegram_id AND e.paid_by != u.telegram_id AND es.is_settled = FALSE
-                    THEN es.amount_owed ELSE 0 END), 0) AS total_owed
-     FROM group_members gm
-     JOIN users u ON u.telegram_id = gm.user_id
-     LEFT JOIN expenses e ON e.group_id = gm.group_id
-     LEFT JOIN expense_splits es ON es.expense_id = e.id
-     WHERE gm.group_id = $1
-     GROUP BY u.telegram_id, u.full_name, u.username, u.ton_wallet`,
-    [groupId]
-  );
+  // Get all members
+  const { data: members, error: mErr } = await supabase
+    .from('group_members')
+    .select('users (telegram_id, full_name, username, ton_wallet)')
+    .eq('group_id', groupId);
+  if (mErr) throw new Error(mErr.message);
 
-  const members = result.rows;
+  // Get all unsettled splits with expense info
+  const { data: splits, error: sErr } = await supabase
+    .from('expense_splits')
+    .select('user_id, amount_owed, expenses!inner(paid_by, group_id)')
+    .eq('expenses.group_id', groupId)
+    .eq('is_settled', false);
+  if (sErr) throw new Error(sErr.message);
 
-  // Step 2: Calculate net balance per person
-  // Positive = they are owed money; Negative = they owe money
-  const balances = members.map(m => ({
-    ...m,
-    net: parseFloat(m.total_paid_for_others) - parseFloat(m.total_owed),
-  }));
+  const memberList = members.map(m => m.users);
+  const balances = memberList.map(m => {
+    const paidForOthers = splits
+      .filter(s => s.expenses.paid_by === m.telegram_id && s.user_id !== m.telegram_id)
+      .reduce((sum, s) => sum + parseFloat(s.amount_owed), 0);
+    const totalOwed = splits
+      .filter(s => s.user_id === m.telegram_id && s.expenses.paid_by !== m.telegram_id)
+      .reduce((sum, s) => sum + parseFloat(s.amount_owed), 0);
+    return { ...m, total_paid_for_others: paidForOthers, total_owed: totalOwed, net: paidForOthers - totalOwed };
+  });
 
-  // Step 3: Minimize transactions algorithm
-  // Sort into creditors (positive) and debtors (negative)
-  const transactions = minimizeTransactions(balances);
-
-  return { balances, transactions };
+  return { balances, transactions: minimizeTransactions(balances) };
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// minimizeTransactions — Greedy algorithm to reduce number of payments
-// Given net balances, find the minimum set of transactions to settle all debts
-// ─────────────────────────────────────────────────────────────────────────────
 const minimizeTransactions = (balances) => {
-  const creditors = balances
-    .filter(b => b.net > 0.01)
-    .map(b => ({ ...b, amount: b.net }))
-    .sort((a, b) => b.amount - a.amount);
-
-  const debtors = balances
-    .filter(b => b.net < -0.01)
-    .map(b => ({ ...b, amount: Math.abs(b.net) }))
-    .sort((a, b) => b.amount - a.amount);
-
+  const creditors = balances.filter(b => b.net > 0.01).map(b => ({ ...b, amount: b.net })).sort((a, b) => b.amount - a.amount);
+  const debtors   = balances.filter(b => b.net < -0.01).map(b => ({ ...b, amount: Math.abs(b.net) })).sort((a, b) => b.amount - a.amount);
   const transactions = [];
   let i = 0, j = 0;
-
   while (i < creditors.length && j < debtors.length) {
-    const settle = Math.min(creditors[i].amount, debtors[j].amount);
-    settle_amount = parseFloat(settle.toFixed(2));
-
-    transactions.push({
-      from: {
-        telegram_id: debtors[j].telegram_id,
-        full_name:   debtors[j].full_name,
-        ton_wallet:  debtors[j].ton_wallet,
-      },
-      to: {
-        telegram_id: creditors[i].telegram_id,
-        full_name:   creditors[i].full_name,
-        ton_wallet:  creditors[i].ton_wallet,
-      },
-      amount: settle_amount,
-    });
-
+    const settle = parseFloat(Math.min(creditors[i].amount, debtors[j].amount).toFixed(2));
+    transactions.push({ from: { telegram_id: debtors[j].telegram_id, full_name: debtors[j].full_name, ton_wallet: debtors[j].ton_wallet }, to: { telegram_id: creditors[i].telegram_id, full_name: creditors[i].full_name, ton_wallet: creditors[i].ton_wallet }, amount: settle });
     creditors[i].amount -= settle;
-    debtors[j].amount   -= settle;
-
+    debtors[j].amount -= settle;
     if (creditors[i].amount < 0.01) i++;
-    if (debtors[j].amount < 0.01)   j++;
+    if (debtors[j].amount < 0.01) j++;
   }
-
   return transactions;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// settleDebt — Mark splits as settled and record the settlement
-// ─────────────────────────────────────────────────────────────────────────────
-export const settleDebt = async ({
-  groupId,
-  fromUserId,
-  toUserId,
-  amount,
-  currency = 'USD',
-  method = 'manual',
-  txHash = null,
-}) => {
-  return await transaction(async (client) => {
-    // Mark all relevant unsettled splits as settled
-    await client.query(
-      `UPDATE expense_splits es
-       SET is_settled = TRUE, settled_at = NOW()
-       FROM expenses e
-       WHERE es.expense_id = e.id
-         AND e.group_id    = $1
-         AND es.user_id    = $2
-         AND e.paid_by     = $3
-         AND es.is_settled = FALSE`,
-      [groupId, fromUserId, toUserId]
-    );
-
-    // Record the settlement transaction
-    const result = await client.query(
-      `INSERT INTO settlements
-         (group_id, from_user_id, to_user_id, amount, currency, method, tx_hash)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING *`,
-      [groupId, fromUserId, toUserId, amount, currency, method, txHash]
-    );
-
-    return result.rows[0];
-  });
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// deleteExpense — Soft delete (only group admin or expense creator can delete)
-// ─────────────────────────────────────────────────────────────────────────────
-export const deleteExpense = async (expenseId, requestingUserId) => {
-  // Verify ownership or admin role
-  const expenseCheck = await query(
-    'SELECT paid_by, group_id FROM expenses WHERE id = $1',
-    [expenseId]
-  );
-  if (!expenseCheck.rows[0]) throw new Error('EXPENSE_NOT_FOUND');
-
-  const { paid_by, group_id } = expenseCheck.rows[0];
-
-  const isAdmin = await query(
-    `SELECT role FROM group_members
-     WHERE group_id = $1 AND user_id = $2 AND role = 'admin'`,
-    [group_id, requestingUserId]
-  );
-
-  if (paid_by !== requestingUserId && isAdmin.rows.length === 0) {
-    throw new Error('UNAUTHORIZED');
+export const settleDebt = async ({ groupId, fromUserId, toUserId, amount, currency = 'USD', method = 'manual', txHash = null }) => {
+  // Mark splits as settled
+  const { data: expenseIds } = await supabase.from('expenses').select('id').eq('group_id', groupId).eq('paid_by', toUserId);
+  if (expenseIds?.length) {
+    await supabase.from('expense_splits')
+      .update({ is_settled: true, settled_at: new Date().toISOString() })
+      .in('expense_id', expenseIds.map(e => e.id))
+      .eq('user_id', fromUserId)
+      .eq('is_settled', false);
   }
 
-  // Delete splits first (cascade would also handle this, but explicit is safer)
-  await query('DELETE FROM expense_splits WHERE expense_id = $1', [expenseId]);
-  await query('DELETE FROM expenses WHERE id = $1', [expenseId]);
+  const { data, error } = await supabase
+    .from('settlements')
+    .insert({ group_id: groupId, from_user_id: fromUserId, to_user_id: toUserId, amount, currency, method, tx_hash: txHash })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+export const deleteExpense = async (expenseId, requestingUserId) => {
+  const { data: expense } = await supabase.from('expenses').select('paid_by, group_id').eq('id', expenseId).maybeSingle();
+  if (!expense) throw new Error('EXPENSE_NOT_FOUND');
+
+  const { data: member } = await supabase.from('group_members').select('role').eq('group_id', expense.group_id).eq('user_id', requestingUserId).maybeSingle();
+  if (expense.paid_by !== requestingUserId && member?.role !== 'admin') throw new Error('UNAUTHORIZED');
+
+  await supabase.from('expense_splits').delete().eq('expense_id', expenseId);
+  const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
+  if (error) throw new Error(error.message);
 };

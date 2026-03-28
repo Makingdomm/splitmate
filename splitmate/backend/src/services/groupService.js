@@ -1,138 +1,93 @@
-// =============================================================================
-// services/groupService.js — Group creation, membership, and invite logic
-// =============================================================================
-
-import { query, transaction } from '../db/client.js';
+import { supabase } from '../db/client.js';
 import { nanoid } from 'nanoid';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// createGroup — Create a new expense group and add creator as admin
-// ─────────────────────────────────────────────────────────────────────────────
 export const createGroup = async ({ name, description, createdBy, currency = 'USD', telegramChatId = null }) => {
-  return await transaction(async (client) => {
-    // Generate a short, unique invite code (e.g. "abc123XY")
-    const inviteCode = nanoid(8);
+  const inviteCode = nanoid(8);
 
-    // Create the group
-    const groupResult = await client.query(
-      `INSERT INTO groups (name, description, created_by, currency, invite_code, telegram_chat_id)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [name, description, createdBy, currency, inviteCode, telegramChatId]
-    );
-    const group = groupResult.rows[0];
+  const { data: group, error: gErr } = await supabase
+    .from('groups')
+    .insert({ name, description, created_by: createdBy, currency, invite_code: inviteCode, telegram_chat_id: telegramChatId })
+    .select()
+    .single();
+  if (gErr) throw new Error(gErr.message);
 
-    // Add creator as admin member
-    await client.query(
-      `INSERT INTO group_members (group_id, user_id, role)
-       VALUES ($1, $2, 'admin')`,
-      [group.id, createdBy]
-    );
+  const { error: mErr } = await supabase
+    .from('group_members')
+    .insert({ group_id: group.id, user_id: createdBy, role: 'admin' });
+  if (mErr) throw new Error(mErr.message);
 
-    return group;
-  });
+  return group;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// getGroupById — Fetch a group with member count
-// ─────────────────────────────────────────────────────────────────────────────
 export const getGroupById = async (groupId) => {
-  const result = await query(
-    `SELECT g.*, COUNT(gm.user_id) AS member_count
-     FROM groups g
-     LEFT JOIN group_members gm ON gm.group_id = g.id
-     WHERE g.id = $1 AND g.is_active = TRUE
-     GROUP BY g.id`,
-    [groupId]
-  );
-  return result.rows[0] || null;
+  const { data, error } = await supabase
+    .from('groups')
+    .select('*, group_members(count)')
+    .eq('id', groupId)
+    .eq('is_active', true)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// getGroupByInviteCode — Used for deep-link joins
-// ─────────────────────────────────────────────────────────────────────────────
 export const getGroupByInviteCode = async (inviteCode) => {
-  const result = await query(
-    'SELECT * FROM groups WHERE invite_code = $1 AND is_active = TRUE',
-    [inviteCode]
-  );
-  return result.rows[0] || null;
+  const { data, error } = await supabase
+    .from('groups')
+    .select('*')
+    .eq('invite_code', inviteCode)
+    .eq('is_active', true)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// getUserGroups — All groups a user belongs to, with balance summary
-// ─────────────────────────────────────────────────────────────────────────────
 export const getUserGroups = async (telegramId) => {
-  const result = await query(
-    `SELECT
-       g.*,
-       gm.role,
-       gm.joined_at,
-       COUNT(DISTINCT gm2.user_id) AS member_count,
-       COALESCE(SUM(
-         CASE WHEN es.user_id = $1 AND es.is_settled = FALSE THEN es.amount_owed ELSE 0 END
-       ), 0) AS total_owed,
-       COALESCE(SUM(
-         CASE WHEN e.paid_by = $1 AND es2.is_settled = FALSE AND es2.user_id != $1
-              THEN es2.amount_owed ELSE 0 END
-       ), 0) AS total_lent
-     FROM groups g
-     JOIN group_members gm ON gm.group_id = g.id AND gm.user_id = $1
-     LEFT JOIN group_members gm2 ON gm2.group_id = g.id
-     LEFT JOIN expenses e ON e.group_id = g.id
-     LEFT JOIN expense_splits es ON es.expense_id = e.id AND es.user_id = $1
-     LEFT JOIN expense_splits es2 ON es2.expense_id = e.id
-     WHERE g.is_active = TRUE
-     GROUP BY g.id, gm.role, gm.joined_at
-     ORDER BY g.created_at DESC`,
-    [telegramId]
-  );
-  return result.rows;
+  const { data, error } = await supabase
+    .from('group_members')
+    .select(`
+      role, joined_at,
+      groups (*)
+    `)
+    .eq('user_id', telegramId)
+    .eq('groups.is_active', true);
+  if (error) throw new Error(error.message);
+  return data.filter(m => m.groups).map(m => ({ ...m.groups, role: m.role, joined_at: m.joined_at }));
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// getGroupMembers — All members of a group with their user details
-// ─────────────────────────────────────────────────────────────────────────────
 export const getGroupMembers = async (groupId) => {
-  const result = await query(
-    `SELECT u.telegram_id, u.username, u.full_name, u.photo_url,
-            u.ton_wallet, gm.role, gm.joined_at
-     FROM group_members gm
-     JOIN users u ON u.telegram_id = gm.user_id
-     WHERE gm.group_id = $1
-     ORDER BY gm.joined_at ASC`,
-    [groupId]
-  );
-  return result.rows;
+  const { data, error } = await supabase
+    .from('group_members')
+    .select(`
+      role, joined_at,
+      users (telegram_id, username, full_name, photo_url, ton_wallet)
+    `)
+    .eq('group_id', groupId)
+    .order('joined_at');
+  if (error) throw new Error(error.message);
+  return data.map(m => ({ ...m.users, role: m.role, joined_at: m.joined_at }));
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// joinGroup — Add a user to a group (with free tier check)
-// ─────────────────────────────────────────────────────────────────────────────
 export const joinGroup = async (groupId, telegramId) => {
-  // Check if already a member
-  const existing = await query(
-    'SELECT id FROM group_members WHERE group_id = $1 AND user_id = $2',
-    [groupId, telegramId]
-  );
-  if (existing.rows.length > 0) {
-    throw new Error('ALREADY_MEMBER');
-  }
+  const { data: existing } = await supabase
+    .from('group_members')
+    .select('id')
+    .eq('group_id', groupId)
+    .eq('user_id', telegramId)
+    .maybeSingle();
+  if (existing) throw new Error('ALREADY_MEMBER');
 
-  await query(
-    `INSERT INTO group_members (group_id, user_id, role)
-     VALUES ($1, $2, 'member')`,
-    [groupId, telegramId]
-  );
+  const { error } = await supabase
+    .from('group_members')
+    .insert({ group_id: groupId, user_id: telegramId, role: 'member' });
+  if (error) throw new Error(error.message);
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// isMember — Check if a user belongs to a group
-// ─────────────────────────────────────────────────────────────────────────────
 export const isMember = async (groupId, telegramId) => {
-  const result = await query(
-    'SELECT id FROM group_members WHERE group_id = $1 AND user_id = $2',
-    [groupId, telegramId]
-  );
-  return result.rows.length > 0;
+  const { data } = await supabase
+    .from('group_members')
+    .select('id')
+    .eq('group_id', groupId)
+    .eq('user_id', telegramId)
+    .maybeSingle();
+  return !!data;
 };

@@ -1,104 +1,69 @@
-// =============================================================================
-// services/userService.js — User CRUD and Pro subscription logic
-// =============================================================================
+import { supabase } from '../db/client.js';
 
-import { query } from '../db/client.js';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// upsertUser — Create or update a user from Telegram initData
-// Called every time a user opens the Mini App or interacts with the bot
-// ─────────────────────────────────────────────────────────────────────────────
 export const upsertUser = async ({ telegram_id, username, full_name, photo_url }) => {
-  const result = await query(
-    `INSERT INTO users (telegram_id, username, full_name, photo_url)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (telegram_id)
-     DO UPDATE SET
-       username  = EXCLUDED.username,
-       full_name = EXCLUDED.full_name,
-       photo_url = EXCLUDED.photo_url,
-       updated_at = NOW()
-     RETURNING *`,
-    [telegram_id, username, full_name, photo_url]
-  );
-  return result.rows[0];
+  const { data, error } = await supabase
+    .from('users')
+    .upsert({ telegram_id, username, full_name, photo_url, updated_at: new Date().toISOString() },
+             { onConflict: 'telegram_id' })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// getUserByTelegramId — Fetch a single user record
-// ─────────────────────────────────────────────────────────────────────────────
 export const getUserByTelegramId = async (telegramId) => {
-  const result = await query(
-    'SELECT * FROM users WHERE telegram_id = $1',
-    [telegramId]
-  );
-  return result.rows[0] || null;
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('telegram_id', telegramId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// isProUser — Check if user has an active Pro subscription
-// ─────────────────────────────────────────────────────────────────────────────
 export const isProUser = async (telegramId) => {
-  const result = await query(
-    `SELECT pro_status, pro_expires_at FROM users
-     WHERE telegram_id = $1`,
-    [telegramId]
-  );
-  const user = result.rows[0];
-  if (!user) return false;
-  if (!user.pro_status) return false;
-  // Check expiry — if expires_at is null, it's lifetime Pro
-  if (user.pro_expires_at && new Date(user.pro_expires_at) < new Date()) {
-    // Subscription expired — downgrade automatically
-    await query(
-      'UPDATE users SET pro_status = FALSE WHERE telegram_id = $1',
-      [telegramId]
-    );
+  const { data, error } = await supabase
+    .from('users')
+    .select('pro_status, pro_expires_at')
+    .eq('telegram_id', telegramId)
+    .maybeSingle();
+  if (error || !data) return false;
+  if (!data.pro_status) return false;
+  if (data.pro_expires_at && new Date(data.pro_expires_at) < new Date()) {
+    await supabase.from('users').update({ pro_status: false }).eq('telegram_id', telegramId);
     return false;
   }
   return true;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// activateProSubscription — Called after successful Stars payment
-// Sets pro_status = true and extends expiry by 30 days
-// ─────────────────────────────────────────────────────────────────────────────
 export const activateProSubscription = async (telegramId) => {
-  const result = await query(
-    `UPDATE users
-     SET
-       pro_status     = TRUE,
-       pro_expires_at = NOW() + INTERVAL '30 days',
-       updated_at     = NOW()
-     WHERE telegram_id = $1
-     RETURNING *`,
-    [telegramId]
-  );
-  return result.rows[0];
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from('users')
+    .update({ pro_status: true, pro_expires_at: expiresAt, updated_at: new Date().toISOString() })
+    .eq('telegram_id', telegramId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// updateTonWallet — Save user's connected TON wallet address
-// ─────────────────────────────────────────────────────────────────────────────
 export const updateTonWallet = async (telegramId, walletAddress) => {
-  const result = await query(
-    `UPDATE users SET ton_wallet = $2, updated_at = NOW()
-     WHERE telegram_id = $1
-     RETURNING *`,
-    [telegramId, walletAddress]
-  );
-  return result.rows[0];
+  const { data, error } = await supabase
+    .from('users')
+    .update({ ton_wallet: walletAddress, updated_at: new Date().toISOString() })
+    .eq('telegram_id', telegramId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// countUserGroups — How many groups is this user a member of?
-// Used to enforce free tier limit of 3 groups
-// ─────────────────────────────────────────────────────────────────────────────
 export const countUserGroups = async (telegramId) => {
-  const result = await query(
-    `SELECT COUNT(*) FROM group_members
-     WHERE user_id = $1`,
-    [telegramId]
-  );
-  return parseInt(result.rows[0].count, 10);
+  const { count, error } = await supabase
+    .from('group_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', telegramId);
+  if (error) throw new Error(error.message);
+  return count || 0;
 };
