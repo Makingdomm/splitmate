@@ -1,0 +1,77 @@
+// =============================================================================
+// utils/api.js — Centralized API client
+// Automatically attaches Telegram initData to every request for authentication
+// =============================================================================
+
+const API_URL = import.meta.env.VITE_API_URL;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getInitData — Get the raw initData string from Telegram WebApp
+// This is signed by Telegram and verified server-side
+// ─────────────────────────────────────────────────────────────────────────────
+const getInitData = () => {
+  return window.Telegram?.WebApp?.initData || '';
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// request — Base fetch wrapper with auth headers and error handling
+// ─────────────────────────────────────────────────────────────────────────────
+const request = async (method, path, body = null) => {
+  const options = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-telegram-init-data': getInitData(), // Auth header
+    },
+  };
+
+  if (body && method !== 'GET') {
+    options.body = JSON.stringify(body);
+  }
+
+  const response = await fetch(`${API_URL}${path}`, options);
+  const data = await response.json();
+
+  if (!response.ok) {
+    // Throw a structured error so components can handle specific codes
+    const error = new Error(data.message || data.error || 'Request failed');
+    error.code = data.error;
+    error.status = response.status;
+    throw error;
+  }
+
+  return data;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// API methods — typed interface for all backend endpoints
+// ─────────────────────────────────────────────────────────────────────────────
+export const api = {
+  // Groups
+  groups: {
+    list:     ()           => request('GET',  '/api/groups'),
+    get:      (id)         => request('GET',  `/api/groups/${id}`),
+    create:   (data)       => request('POST', '/api/groups', data),
+    balances: (id)         => request('GET',  `/api/groups/${id}/balances`),
+    join:     (inviteCode) => request('POST', '/api/groups/join', { inviteCode }),
+    preview:  (code)       => request('GET',  `/api/groups/invite/${code}`),
+  },
+
+  // Expenses
+  expenses: {
+    list:    (groupId, limit, offset) =>
+      request('GET', `/api/expenses/${groupId}?limit=${limit}&offset=${offset}`),
+    add:     (data)   => request('POST',   '/api/expenses', data),
+    settle:  (data)   => request('POST',   '/api/expenses/settle', data),
+    delete:  (id)     => request('DELETE', `/api/expenses/${id}`),
+  },
+
+  // Payments
+  payments: {
+    status:     ()     => request('GET',  '/api/payments/status'),
+    upgrade:    ()     => request('POST', '/api/payments/invoice'),
+    currencies: ()     => request('GET',  '/api/payments/currencies'),
+  },
+};
+
+export default api;
