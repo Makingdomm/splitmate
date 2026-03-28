@@ -102,10 +102,10 @@ export default function ProUpgrade({ onToast }) {
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>Pro Monthly</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-              <span style={{ fontSize: 38, fontWeight: 900, color: 'var(--text)', letterSpacing: -2 }}>⭐50</span>
+              <span style={{ fontSize: 38, fontWeight: 900, color: 'var(--text)', letterSpacing: -2 }}>⭐500</span>
               <span style={{ fontSize: 14, color: 'var(--text-3)', fontWeight: 500 }}>Stars / mo</span>
             </div>
-            <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4 }}>≈ $1 · Cancel anytime</div>
+            <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4 }}>≈ $12.50 · Cancel anytime</div>
           </div>
           <div style={{
             background: 'linear-gradient(135deg, var(--accent), #6a5ef7)',
@@ -150,7 +150,7 @@ export default function ProUpgrade({ onToast }) {
             <span className="spinner" style={{ width: 18, height: 18, borderWidth: 2, borderTopColor: '#1a1200' }} />
             Sending invoice…
           </span>
-        ) : '⭐ Upgrade Now — 50 Stars'}
+        ) : '⭐ Upgrade Now — 500 Stars'}
       </button>
 
       <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-3)', marginTop: 12, lineHeight: 1.6 }}>
