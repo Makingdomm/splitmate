@@ -132,3 +132,11 @@ const start = async () => {
 };
 
 start();
+
+// Admin: manually trigger reminder job (for testing)
+app.post('/api/admin/trigger-reminders', async (req, reply) => {
+  const secret = req.headers['x-admin-secret'];
+  if (secret !== config.BOT_SECRET) return reply.code(401).send({ error: 'Unauthorized' });
+  await sendDebtReminders();
+  return { success: true, message: 'Reminders triggered' };
+});
