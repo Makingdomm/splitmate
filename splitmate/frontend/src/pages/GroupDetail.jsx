@@ -67,8 +67,15 @@ export default function GroupDetail({ onNavigate, onToast }) {
         </div>
         <button
           onClick={() => {
-            const url = `https://t.me/SplitMateBot?start=group_${activeGroup.invite_code}`;
-            window.Telegram?.WebApp?.openTelegramLink(url);
+            const inviteLink = `https://t.me/SplitMateBot?start=group_${activeGroup.invite_code}`;
+            const shareText = `Join my expense group "${activeGroup.name}" on SplitMate!\n\n${inviteLink}`;
+            // Use Telegram's native share — opens forward/share sheet
+            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(`Join my expense group "${activeGroup.name}" on SplitMate!`)}`;
+            if (window.Telegram?.WebApp?.openTelegramLink) {
+              window.Telegram.WebApp.openTelegramLink(shareUrl);
+            } else {
+              navigator.clipboard?.writeText(inviteLink);
+            }
           }}
           style={{
             width:36, height:36, borderRadius:12, border:'1px solid rgba(79,142,247,0.3)',
@@ -76,7 +83,7 @@ export default function GroupDetail({ onNavigate, onToast }) {
             cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
           }}
           title="Invite"
-        >👤</button>
+        >🔗</button>
       </div>
 
       {/* ── Tab Bar ── */}
