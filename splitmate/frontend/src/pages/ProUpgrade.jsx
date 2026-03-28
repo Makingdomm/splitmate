@@ -34,6 +34,7 @@ export default function ProUpgrade({ onToast }) {
   const { paymentStatus } = useAppStore();
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState('standard');
+  const [invoiceSent, setInvoiceSent] = useState(false);
 
   const tier = TIERS.find(t => t.key === selected);
 
@@ -41,13 +42,52 @@ export default function ProUpgrade({ onToast }) {
     setLoading(true);
     try {
       await api.payments.upgrade();
-      onToast('✅ Invoice sent — check your Telegram messages!', 'success');
+      setInvoiceSent(true);
     } catch (err) {
       onToast('Failed to send invoice. Try again.', 'error');
     } finally {
       setLoading(false);
     }
   };
+
+  if (invoiceSent) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(180deg, #060818 0%, #0a0f2e 50%, #060818 100%)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '0 32px',
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 72, marginBottom: 20, filter: 'drop-shadow(0 0 24px rgba(245,176,30,0.8))' }}>⭐</div>
+          <div style={{ fontSize: 24, fontWeight: 900, color: '#f5c842', marginBottom: 12 }}>Invoice Sent!</div>
+          <div style={{ fontSize: 15, color: '#8b96c8', lineHeight: 1.8, marginBottom: 28 }}>
+            Check your Telegram chat with<br/>
+            <span style={{ color: '#fff', fontWeight: 700 }}>@SplitMateExpenseBot</span><br/>
+            to complete the payment with Stars.
+          </div>
+          <div style={{
+            background: 'rgba(245,176,30,0.08)', border: '1px solid rgba(245,176,30,0.2)',
+            borderRadius: 16, padding: '16px 20px', marginBottom: 24,
+          }}>
+            <div style={{ fontSize: 13, color: '#7a6020', marginBottom: 8 }}>You will pay</div>
+            <div style={{ fontSize: 28, fontWeight: 900, color: '#f5c842' }}>⭐ {tier.price} Stars</div>
+            <div style={{ fontSize: 12, color: '#4a3800', marginTop: 4 }}>{tier.name} plan · 1 month</div>
+          </div>
+          <button
+            onClick={() => window.Telegram?.WebApp?.close()}
+            style={{
+              width: '100%', height: 52, background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.10)', borderRadius: 16,
+              fontSize: 15, fontWeight: 700, color: '#7a8ab8', cursor: 'pointer',
+            }}
+          >
+            Close &amp; Pay in Chat
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (paymentStatus?.isPro) {
     return (
