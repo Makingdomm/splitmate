@@ -1,7 +1,3 @@
-// =============================================================================
-// components/LoadingScreen.jsx — Shown while app initializes
-// =============================================================================
-
 import React from 'react';
 
 export default function LoadingScreen() {
@@ -9,7 +5,7 @@ export default function LoadingScreen() {
     <div className="loading-screen">
       <div className="loading-logo">💸</div>
       <div className="loading-spinner" />
-      <p className="loading-text">SplitMate</p>
+      <p className="loading-text">Loading SplitMate…</p>
     </div>
   );
 }

@@ -1,7 +1,3 @@
-// =============================================================================
-// components/BottomNav.jsx — Persistent bottom navigation bar
-// =============================================================================
-
 import React from 'react';
 
 const NAV_ITEMS = [

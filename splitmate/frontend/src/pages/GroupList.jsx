@@ -1,7 +1,3 @@
-// =============================================================================
-// pages/GroupList.jsx — Main screen: list of user's expense groups
-// =============================================================================
-
 import React from 'react';
 import useAppStore from '../store/appStore.js';
 
@@ -17,12 +13,17 @@ export default function GroupList({ onNavigate, onToast }) {
     return sum + parseFloat(g.total_lent || 0) - parseFloat(g.total_owed || 0);
   }, 0);
 
+  const summaryClass = totalNet > 0.01 ? 'positive' : totalNet < -0.01 ? 'negative' : 'neutral';
+  const summaryEmoji = totalNet > 0.01 ? '↑' : totalNet < -0.01 ? '↓' : '✓';
+  const summaryText  = totalNet > 0.01 ? "You're owed money" : totalNet < -0.01 ? "You owe money" : "All settled up";
+
   return (
     <div className="page">
       {/* Header */}
       <div className="header">
+        <div className="header-logo">💸</div>
         <div>
-          <h1 className="header-title">💸 SplitMate</h1>
+          <h1 className="header-title">SplitMate</h1>
           <p className="header-subtitle">
             {user ? `Hey, ${user.first_name}!` : 'Your expense groups'}
             {paymentStatus?.isPro && <span className="pro-badge">⭐ Pro</span>}
@@ -32,23 +33,21 @@ export default function GroupList({ onNavigate, onToast }) {
 
       {/* Net balance summary */}
       {groups.length > 0 && (
-        <div className={`balance-summary ${totalNet >= 0 ? 'positive' : 'negative'}`}>
-          <span className="balance-label">Your overall balance</span>
+        <div className={`balance-summary ${summaryClass}`}>
+          <span className="balance-label">Overall balance</span>
           <span className="balance-amount">
-            {totalNet >= 0 ? '+' : ''}{totalNet.toFixed(2)} USD
+            {totalNet >= 0 ? '+' : ''}{totalNet.toFixed(2)}
+            <span style={{ fontSize: 16, fontWeight: 600, marginLeft: 4 }}>USD</span>
           </span>
-          <span className="balance-hint">
-            {totalNet > 0.01
-              ? "You're owed money 🎉"
-              : totalNet < -0.01
-              ? "You owe money"
-              : "All settled up ✅"}
-          </span>
+          <span className="balance-hint">{summaryEmoji} {summaryText}</span>
         </div>
       )}
 
       {/* Group list */}
-      <div className="section">
+      <div className="section" style={{ marginTop: groups.length === 0 ? 0 : 4 }}>
+        {groups.length > 0 && (
+          <p className="section-title">Your groups</p>
+        )}
         {groups.length === 0 ? (
           <div className="empty-state">
             <span className="empty-icon">👥</span>
@@ -75,12 +74,12 @@ export default function GroupList({ onNavigate, onToast }) {
                     </div>
                   </div>
                 </div>
-                <div className={`group-balance ${net >= 0 ? 'owed' : 'owe'}`}>
-                  {net === 0
+                <div className={`group-balance ${net > 0.01 ? 'owed' : net < -0.01 ? 'owe' : ''}`}>
+                  {Math.abs(net) < 0.01
                     ? <span className="settled">✓</span>
                     : <>
                         {net > 0 ? '+' : ''}{net.toFixed(2)}
-                        <span className="currency">{group.currency}</span>
+                        <span className="currency"> {group.currency}</span>
                       </>
                   }
                 </div>
@@ -92,24 +91,18 @@ export default function GroupList({ onNavigate, onToast }) {
 
       {/* Action buttons */}
       <div className="action-buttons">
-        <button
-          className="btn btn-primary"
-          onClick={() => onNavigate('create-group')}
-        >
+        <button className="btn btn-primary" onClick={() => onNavigate('create-group')}>
           + Create Group
         </button>
-        <button
-          className="btn btn-secondary"
-          onClick={() => onNavigate('join-group')}
-        >
+        <button className="btn btn-secondary" onClick={() => onNavigate('join-group')}>
           Join Group
         </button>
       </div>
 
-      {/* Pro upgrade banner for free users */}
+      {/* Pro upgrade banner for free users near limit */}
       {!paymentStatus?.isPro && groups.length >= 2 && (
         <div className="upgrade-banner" onClick={() => onNavigate('pro')}>
-          <span>⭐ Upgrade to Pro for unlimited groups →</span>
+          ⭐ Upgrade to Pro for unlimited groups →
         </div>
       )}
     </div>
