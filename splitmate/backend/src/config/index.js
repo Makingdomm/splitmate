@@ -1,8 +1,3 @@
-// =============================================================================
-// config/index.js — Centralized configuration loader
-// All env vars validated at startup so the app fails fast if misconfigured
-// =============================================================================
-
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -15,32 +10,27 @@ const required = (key) => {
 const optional = (key, fallback = '') => process.env[key] || fallback;
 
 export const config = {
-  // ── Server ──────────────────────────────────────────────────────────────────
-  PORT: parseInt(optional('PORT', '3000'), 10),
+  PORT:     parseInt(optional('PORT', '3000'), 10),
   NODE_ENV: optional('NODE_ENV', 'development'),
-  APP_URL: required('APP_URL'), // e.g. https://splitmate.railway.app
+  APP_URL:  required('APP_URL'),
 
-  // ── Telegram ─────────────────────────────────────────────────────────────
-  BOT_TOKEN: required('BOT_TOKEN'),           // From @BotFather
-  BOT_SECRET: required('BOT_SECRET'),         // Random string for webhook security
-  MINI_APP_URL: required('MINI_APP_URL'),     // Vercel frontend URL
+  // Telegram
+  BOT_TOKEN:    required('BOT_TOKEN'),
+  BOT_SECRET:   required('BOT_SECRET'),
+  MINI_APP_URL: required('MINI_APP_URL'),
 
-  // ── Database (Supabase / Postgres) ───────────────────────────────────────
-  DATABASE_URL: required('DATABASE_URL'),
+  // Supabase (new — HTTP-based connection)
+  SUPABASE_PROJECT_REF: optional('SUPABASE_PROJECT_REF', 'ikcnjzqoaebczfojqdsg'),
+  SUPABASE_SERVICE_KEY: required('SUPABASE_SERVICE_KEY'),
 
-  // ── Redis (Upstash) ──────────────────────────────────────────────────────
-  REDIS_URL: optional('REDIS_URL', ''),
-  REDIS_TOKEN: optional('REDIS_TOKEN', ''),
+  // Keep DATABASE_URL optional (legacy)
+  DATABASE_URL: optional('DATABASE_URL', ''),
 
-  // ── OpenAI (Pro receipt OCR) ─────────────────────────────────────────────
-  OPENAI_API_KEY: optional('OPENAI_API_KEY', ''),
-
-  // ── Exchange Rates ───────────────────────────────────────────────────────
+  // Optional extras
+  REDIS_URL:              optional('REDIS_URL', ''),
+  REDIS_TOKEN:            optional('REDIS_TOKEN', ''),
+  OPENAI_API_KEY:         optional('OPENAI_API_KEY', ''),
   EXCHANGE_RATES_API_KEY: optional('EXCHANGE_RATES_API_KEY', ''),
-
-  // ── Telegram Stars Pro subscription price (in Stars) ─────────────────────
-  PRO_MONTHLY_STARS: parseInt(optional('PRO_MONTHLY_STARS', '500'), 10),
-
-  // ── TON settlement fee (percentage) ──────────────────────────────────────
-  TON_FEE_PERCENT: parseFloat(optional('TON_FEE_PERCENT', '0.5')),
+  PRO_MONTHLY_STARS:      parseInt(optional('PRO_MONTHLY_STARS', '500'), 10),
+  TON_FEE_PERCENT:        parseFloat(optional('TON_FEE_PERCENT', '0.5')),
 };
