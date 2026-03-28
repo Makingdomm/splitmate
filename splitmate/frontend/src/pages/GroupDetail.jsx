@@ -31,15 +31,20 @@ export default function GroupDetail({ onNavigate, onToast }) {
     if (!paymentStatus?.isPro) { onNavigate('pro'); return; }
     try {
       const API = import.meta.env.VITE_API_URL || '';
-      const token = window.Telegram?.WebApp?.initData || localStorage.getItem('tg_init_data') || '';
+      const token = window.Telegram?.WebApp?.initData || '';
+      if (!token) { onToast('Open this in Telegram to export', 'error'); return; }
       const resp = await fetch(`${API}/api/expenses/${activeGroup.id}/export`, {
         headers: { 'x-telegram-init-data': token },
       });
-      if (!resp.ok) { const e = await resp.json(); throw new Error(e.message || 'Export failed'); }
+      if (!resp.ok) {
+        let errMsg = 'Export failed';
+        try { const e = await resp.json(); errMsg = e.message || e.error || errMsg; } catch {}
+        throw new Error(errMsg);
+      }
       const blob = await resp.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = `splitmate-${activeGroup.name}.csv`;
+      a.href = url; a.download = `splitmate-${activeGroup.name.replace(/[^a-z0-9]/gi, '-')}.csv`;
       document.body.appendChild(a); a.click();
       document.body.removeChild(a); URL.revokeObjectURL(url);
       onToast('CSV downloaded! 📊');

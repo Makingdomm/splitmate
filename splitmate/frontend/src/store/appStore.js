@@ -110,8 +110,8 @@ const useAppStore = create((set, get) => ({
     }
   },
 
-  upgradeToProMessage: async () => {
-    await api.payments.upgrade();
+  upgradeToProMessage: async (starsAmount) => {
+    await api.payments.upgrade(starsAmount);
     window.Telegram?.WebApp?.showAlert(
       '✅ Invoice sent! Check your Telegram chat to complete payment with Stars.'
     );

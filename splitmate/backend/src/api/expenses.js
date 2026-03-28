@@ -8,18 +8,22 @@ import {
 import { getGroupMembers, isMember } from '../services/groupService.js';
 import { isProUser } from '../services/userService.js';
 import { recordTonSettlementFee } from '../services/paymentService.js';
+import { supabase } from '../db/client.js';
+
+const MAX_LIMIT = 100;
 
 export default async function expenseRoutes(fastify) {
 
   // ── GET /api/expenses/:groupId — List expenses for a group ───────────────
   fastify.get('/:groupId', async (req, reply) => {
     const { groupId } = req.params;
-    const { limit = 20, offset = 0 } = req.query;
+    const limit  = Math.min(parseInt(req.query.limit  || '20', 10), MAX_LIMIT);
+    const offset = Math.max(parseInt(req.query.offset || '0',  10), 0);
 
     const member = await isMember(groupId, req.user.telegram_id);
     if (!member) return reply.code(403).send({ error: 'Not a member of this group' });
 
-    const expenses = await getGroupExpenses(groupId, parseInt(limit), parseInt(offset));
+    const expenses = await getGroupExpenses(groupId, limit, offset);
     return { expenses };
   });
 
@@ -33,8 +37,8 @@ export default async function expenseRoutes(fastify) {
       category,
       splitType = 'equal',
       splitData,
-      paidBy,      // Optional: defaults to the authenticated user
-    } = req.body;
+      paidBy,
+    } = req.body || {};
 
     // Validate inputs
     if (!groupId || !amount || !description) {
@@ -43,12 +47,15 @@ export default async function expenseRoutes(fastify) {
     if (isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
       return reply.code(400).send({ error: 'Amount must be a positive number' });
     }
+    if (description.trim().length > 200) {
+      return reply.code(400).send({ error: 'Description too long (max 200 chars)' });
+    }
 
     // Verify membership
     const member = await isMember(groupId, req.user.telegram_id);
     if (!member) return reply.code(403).send({ error: 'Not a member of this group' });
 
-    // Custom/percentage splits are Pro-only features
+    // Custom/percentage splits are Pro-only
     if (splitType !== 'equal') {
       const isPro = await isProUser(req.user.telegram_id);
       if (!isPro) {
@@ -59,15 +66,12 @@ export default async function expenseRoutes(fastify) {
       }
     }
 
-    // Get all group members to distribute the expense
     const members = await getGroupMembers(groupId);
     const memberIds = members.map(m => m.telegram_id);
 
-    // The payer can be someone other than the requester (e.g. "John paid for us")
-    const payerId = paidBy || req.user.telegram_id;
-
-    // Verify payer is a group member
-    if (!memberIds.includes(payerId)) {
+    // Validate paidBy — must be integer and a group member
+    const payerId = paidBy ? parseInt(paidBy, 10) : req.user.telegram_id;
+    if (isNaN(payerId) || !memberIds.includes(payerId)) {
       return reply.code(400).send({ error: 'Payer must be a group member' });
     }
 
@@ -77,7 +81,7 @@ export default async function expenseRoutes(fastify) {
       amount:      parseFloat(amount),
       currency:    currency || 'USD',
       description: description.trim(),
-      category,
+      category:    category || 'general',
       splitType,
       splitData,
       memberIds,
@@ -88,17 +92,23 @@ export default async function expenseRoutes(fastify) {
 
   // ── POST /api/expenses/settle — Settle a debt between two users ──────────
   fastify.post('/settle', async (req, reply) => {
-    const { groupId, toUserId, amount, currency, method = 'manual', txHash } = req.body;
+    const { groupId, toUserId, amount, currency, method = 'manual', txHash } = req.body || {};
 
     if (!groupId || !toUserId || !amount) {
       return reply.code(400).send({ error: 'groupId, toUserId, and amount are required' });
     }
+    if (isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+      return reply.code(400).send({ error: 'Amount must be positive' });
+    }
 
-    // Verify membership
+    // Cannot settle with yourself
+    if (parseInt(toUserId, 10) === req.user.telegram_id) {
+      return reply.code(400).send({ error: 'Cannot settle with yourself' });
+    }
+
     const member = await isMember(groupId, req.user.telegram_id);
     if (!member) return reply.code(403).send({ error: 'Not a member of this group' });
 
-    // TON settlement requires Pro
     if (method === 'ton') {
       const isPro = await isProUser(req.user.telegram_id);
       if (!isPro) {
@@ -107,13 +117,11 @@ export default async function expenseRoutes(fastify) {
           message: 'TON wallet settlements require SplitMate Pro.',
         });
       }
-
-      // Record the TON fee
       await recordTonSettlementFee({
         groupId,
         fromUserId: req.user.telegram_id,
-        toUserId,
-        amount: parseFloat(amount),
+        toUserId:   parseInt(toUserId, 10),
+        amount:     parseFloat(amount),
         txHash,
       });
     }
@@ -121,7 +129,7 @@ export default async function expenseRoutes(fastify) {
     const settlement = await settleDebt({
       groupId,
       fromUserId: req.user.telegram_id,
-      toUserId,
+      toUserId:   parseInt(toUserId, 10),
       amount:     parseFloat(amount),
       currency:   currency || 'USD',
       method,
@@ -142,7 +150,6 @@ export default async function expenseRoutes(fastify) {
       throw err;
     }
   });
-}
 
   // ── GET /api/expenses/:groupId/export — CSV export (Pro only) ─────────────
   fastify.get('/:groupId/export', async (req, reply) => {
@@ -154,33 +161,33 @@ export default async function expenseRoutes(fastify) {
     const isPro = await isProUser(req.user.telegram_id);
     if (!isPro) return reply.code(403).send({ error: 'PRO_REQUIRED', message: 'CSV export is a Pro feature.' });
 
-    // Fetch all expenses (no limit)
-    const { data, error } = await (await import('../db/client.js')).supabase
+    const { data, error } = await supabase
       .from('expenses')
       .select(`
         id, description, amount, currency, amount_usd, category, split_type, created_at,
         users!paid_by (full_name, username),
-        expense_splits (amount_owed, is_settled, users (full_name))
+        expense_splits (amount_owed, is_settled)
       `)
       .eq('group_id', groupId)
       .order('created_at', { ascending: true });
 
-    if (error) return reply.code(500).send({ error: error.message });
+    if (error) return reply.code(500).send({ error: 'Failed to fetch expenses' });
 
-    // Build CSV
-    const rows = [];
-    rows.push(['Date', 'Description', 'Category', 'Amount', 'Currency', 'Amount (USD)', 'Paid By', 'Split Type', 'Settled'].join(','));
+    const rows = [
+      ['Date', 'Description', 'Category', 'Amount', 'Currency', 'Amount (USD)', 'Paid By', 'Split Type', 'Settled'].join(','),
+    ];
 
     for (const exp of data || []) {
-      const paidBy = exp.users?.full_name || exp.users?.username || 'Unknown';
+      const paidBy  = exp.users?.full_name || exp.users?.username || 'Unknown';
       const settled = exp.expense_splits?.every(s => s.is_settled) ? 'Yes' : 'No';
-      const date = new Date(exp.created_at).toISOString().split('T')[0];
-      const desc = `"${(exp.description || '').replace(/"/g, '""')}"`;
+      const date    = new Date(exp.created_at).toISOString().split('T')[0];
+      const desc    = `"${(exp.description || '').replace(/"/g, '""')}"`;
       rows.push([date, desc, exp.category, exp.amount, exp.currency, exp.amount_usd, `"${paidBy}"`, exp.split_type, settled].join(','));
     }
 
     const csv = rows.join('\n');
-    reply.header('Content-Type', 'text/csv');
+    reply.header('Content-Type', 'text/csv; charset=utf-8');
     reply.header('Content-Disposition', `attachment; filename="splitmate-${groupId}.csv"`);
     return reply.send(csv);
   });
+}

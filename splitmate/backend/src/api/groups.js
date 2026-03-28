@@ -26,6 +26,9 @@ export default async function groupRoutes(fastify) {
     if (!name || name.trim().length < 2) {
       return reply.code(400).send({ error: 'Group name must be at least 2 characters' });
     }
+    if (name.trim().length > 50) {
+      return reply.code(400).send({ error: 'Group name too long (max 50 chars)' });
+    }
 
     // Free tier: max 3 groups
     const isPro = await isProUser(req.user.telegram_id);

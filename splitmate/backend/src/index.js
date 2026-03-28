@@ -31,9 +31,21 @@ const fastify = Fastify({
 
 // CORS — allow requests from our Mini App frontend
 await fastify.register(cors, {
-  origin: [config.MINI_APP_URL, 'https://web.telegram.org'],
+  origin: (origin, cb) => {
+    // Allow: no origin (server-to-server), Telegram web, our Mini App, Vercel previews
+    if (!origin) return cb(null, true);
+    const allowed = [
+      config.MINI_APP_URL,
+      'https://web.telegram.org',
+    ];
+    const isAllowed =
+      allowed.some(u => origin === u || origin.startsWith(u)) ||
+      /https:\/\/frontend.*vercel\.app$/.test(origin);
+    cb(null, isAllowed);
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'x-telegram-init-data'],
+  credentials: false,
 });
 
 // Security headers
@@ -43,10 +55,17 @@ await fastify.register(helmet, {
 
 // Rate limiting — protect against abuse
 await fastify.register(rateLimit, {
-  max: 100,           // 100 requests per minute per IP
+  max: 120,           // 120 requests per minute per IP
   timeWindow: '1 minute',
+  keyGenerator: (req) => {
+    // Use telegram_id from header for more accurate per-user limiting
+    const initData = req.headers['x-telegram-init-data'] || '';
+    const match = initData.match(/user=%7B%22id%22%3A(\d+)/);
+    return match ? `user_${match[1]}` : req.ip;
+  },
   errorResponseBuilder: () => ({
-    error: 'Too many requests. Please slow down.',
+    error: 'TOO_MANY_REQUESTS',
+    message: 'Too many requests. Please slow down.',
   }),
 });
 
@@ -105,6 +124,16 @@ cron.schedule('0 10 * * *', async () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Admin route — manual trigger for reminder job (protected by BOT_SECRET)
+// ─────────────────────────────────────────────────────────────────────────────
+fastify.post('/api/admin/trigger-reminders', async (req, reply) => {
+  const secret = req.headers['x-admin-secret'];
+  if (secret !== config.BOT_SECRET) return reply.code(401).send({ error: 'Unauthorized' });
+  await sendDebtReminders();
+  return { success: true, message: 'Reminders triggered' };
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Start server
 // ─────────────────────────────────────────────────────────────────────────────
 const start = async () => {
@@ -133,10 +162,3 @@ const start = async () => {
 
 start();
 
-// Admin: manually trigger reminder job (for testing)
-app.post('/api/admin/trigger-reminders', async (req, reply) => {
-  const secret = req.headers['x-admin-secret'];
-  if (secret !== config.BOT_SECRET) return reply.code(401).send({ error: 'Unauthorized' });
-  await sendDebtReminders();
-  return { success: true, message: 'Reminders triggered' };
-});

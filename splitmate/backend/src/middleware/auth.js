@@ -67,7 +67,7 @@ export const authMiddleware = async (req, reply) => {
 
   } catch (err) {
     console.error('Auth error:', err.message);
-    return reply.code(401).send({ error: 'Unauthorized', detail: err.message });
+    return reply.code(401).send({ error: 'Unauthorized' });
   }
 };
 
