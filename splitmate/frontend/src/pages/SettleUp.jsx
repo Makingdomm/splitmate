@@ -54,20 +54,27 @@ export default function SettleUp({ onNavigate, onToast }) {
 
   // ── Telegram Wallet deep-link pay ──────────────────────────────────────────
   const openTelegramWallet = () => {
-    // Format amount as integer TON (wallet only supports TON natively)
-    // We send the user to @wallet with recipient username pre-filled
+    // Find the recipient's saved TON wallet address
+    const tonWallet = creditorWallets.find(w => w.chain === 'TON');
     const recipientUsername = to?.username;
-    const amountTon = amount; // we'll show it as the amount to send
 
-    if (!recipientUsername) {
-      onToast('Recipient has no Telegram username — try crypto instead', 'error');
+    // Amount in nanotons (1 TON = 1_000_000_000 nanotons)
+    const amountNano = Math.round(amount * 1_000_000_000);
+    const comment = encodeURIComponent(`SplitMate: ${activeGroup.name}`);
+
+    let walletUrl;
+
+    if (tonWallet?.address) {
+      // Best: use ton:// deep link with actual TON address — works with any TON wallet app
+      walletUrl = `ton://transfer/${tonWallet.address}?amount=${amountNano}&text=${comment}`;
+    } else if (recipientUsername) {
+      // Fallback: open @wallet bot with username (user fills in amount manually)
+      walletUrl = `https://t.me/wallet`;
+      onToast(`Recipient has no TON address saved. Opening @wallet — send ${amount.toFixed(2)} to @${recipientUsername}`, 'error');
+    } else {
+      onToast('Recipient has no TON wallet or username set up', 'error');
       return;
     }
-
-    // @wallet deep link: opens wallet, pre-fills send form to recipient
-    // Format: https://t.me/wallet?startattach=send&to=@username&amount=X&comment=...
-    const comment = encodeURIComponent(`SplitMate: ${activeGroup.name}`);
-    const walletUrl = `https://t.me/wallet?startattach=send&to=@${recipientUsername}&amount=${amountTon}&comment=${comment}`;
 
     if (window.Telegram?.WebApp?.openTelegramLink) {
       window.Telegram.WebApp.openTelegramLink(walletUrl);
