@@ -217,7 +217,7 @@ export default function GroupList({ onNavigate, onToast }) {
         </button>
 
         {/* ── Pro upsell banner ── */}
-        {!paymentStatus?.isPro && groups.length >= 2 && (
+        {!paymentStatus?.isPro && groups.length >= 1 && (
           <div
             onClick={() => onNavigate('pro')}
             style={{
@@ -229,8 +229,14 @@ export default function GroupList({ onNavigate, onToast }) {
           >
             <span style={{ fontSize:22 }}>⭐</span>
             <div style={{ flex:1 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:'#f5c842', marginBottom:2 }}>Upgrade to Pro</div>
-              <div style={{ fontSize:12, color:'#7a6020' }}>Unlimited groups + AI features →</div>
+              <div style={{ fontSize:13, fontWeight:700, color:'#f5c842', marginBottom:2 }}>
+                {groups.length >= 2 ? '🔒 Free limit reached — Upgrade' : 'Upgrade to Pro'}
+              </div>
+              <div style={{ fontSize:12, color:'#7a6020' }}>
+                {groups.length >= 2
+                  ? 'Only 99 Stars/mo — cheaper than Splitwise ›'
+                  : 'Unlimited groups + AI receipt scanning ›'}
+              </div>
             </div>
             <span style={{ color:'#7a6020', fontSize:18 }}>›</span>
           </div>

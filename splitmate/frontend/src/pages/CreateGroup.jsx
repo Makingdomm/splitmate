@@ -38,12 +38,32 @@ export default function CreateGroup({ onNavigate, onToast }) {
         <h1 style={{ fontSize:20, fontWeight:900, color:'#fff' }}>Create Group</h1>
       </div>
       <div style={{ textAlign:'center', padding:'60px 32px', position:'relative', zIndex:1 }}>
-        <div style={{ fontSize:64, marginBottom:20, filter:'drop-shadow(0 0 20px rgba(245,176,30,0.5))' }}>🔒</div>
-        <h2 style={{ fontSize:22, fontWeight:900, color:'#f5c842', marginBottom:12 }}>Free Plan Limit</h2>
-        <p style={{ fontSize:14, color:'#6070a0', lineHeight:1.7, marginBottom:28 }}>You've used all 3 free groups.<br/>Upgrade to Pro for unlimited groups.</p>
-        <button onClick={() => onNavigate('pro')} style={{ width:'100%', height:56, background:'linear-gradient(135deg,#c4830a,#f5b820,#ffd060,#f5b820)', border:'none', borderRadius:18, fontSize:16, fontWeight:900, color:'#1a0a00', cursor:'pointer', boxShadow:'0 4px 20px rgba(245,176,30,0.4)' }}>
-          ⭐ Upgrade to Pro
+        <div style={{ fontSize:64, marginBottom:16, filter:'drop-shadow(0 0 24px rgba(245,176,30,0.7))', animation:'bounce 1.5s ease-in-out infinite' }}>🔒</div>
+        <style>{`@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}`}</style>
+        <h2 style={{ fontSize:24, fontWeight:900, color:'#f5c842', marginBottom:8 }}>Free Plan Limit</h2>
+        <p style={{ fontSize:14, color:'#7a8ab8', lineHeight:1.8, marginBottom:24 }}>
+          You've used both free groups.<br/>
+          <span style={{ color:'#5060a0' }}>Upgrade for just <span style={{ color:'#f5c842', fontWeight:700 }}>⭐ 99 Stars/mo</span> — cheaper than a coffee.</span>
+        </p>
+        {/* Comparison */}
+        <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:16, padding:'12px 16px', marginBottom:20, textAlign:'left' }}>
+          {[
+            { icon:'📁', text:'Up to 10 groups', pro: true },
+            { icon:'💱', text:'Multi-currency', pro: true },
+            { icon:'🔔', text:'Debt reminders', pro: true },
+            { icon:'📊', text:'Split by % or exact', pro: true },
+          ].map((f, i) => (
+            <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 0', borderBottom: i < 3 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+              <span style={{ fontSize:16 }}>{f.icon}</span>
+              <span style={{ fontSize:13, color:'#c8d0f0', flex:1 }}>{f.text}</span>
+              <span style={{ fontSize:13, color:'#4fa3ff', fontWeight:700 }}>✓ Pro</span>
+            </div>
+          ))}
+        </div>
+        <button onClick={() => onNavigate('pro')} style={{ width:'100%', height:56, background:'linear-gradient(135deg,#c4830a,#f5b820,#ffd060,#f5b820)', border:'none', borderRadius:18, fontSize:16, fontWeight:900, color:'#1a0a00', cursor:'pointer', boxShadow:'0 4px 24px rgba(245,176,30,0.5)', marginBottom:10 }}>
+          ⭐ Upgrade — 99 Stars/month
         </button>
+        <div style={{ fontSize:11, color:'#404870' }}>Cheaper than Splitwise · Cancel anytime</div>
       </div>
     </div>
   );
