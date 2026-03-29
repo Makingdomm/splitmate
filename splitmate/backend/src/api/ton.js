@@ -63,17 +63,17 @@ export default async function tonRoutes(fastify) {
   });
 
   // ── POST /api/ton/verify-pro ──────────────────────────────────────────────
-  // Body: { senderAddress: 'EQ...' }
+  // Body: { senderAddress?: 'EQ...' }  (optional — backend can scan by comment too)
   // Looks up the pending comment from DB, verifies on-chain, activates Pro
   fastify.post('/verify-pro', async (req, reply) => {
     const { senderAddress } = req.body || {};
-    if (!senderAddress) {
-      return reply.code(400).send({ error: 'senderAddress is required' });
-    }
 
-    const normalized = normalizeTonAddress(senderAddress);
-    if (!normalized) {
-      return reply.code(400).send({ error: 'Invalid TON address format' });
+    let normalized = null;
+    if (senderAddress) {
+      normalized = normalizeTonAddress(senderAddress);
+      if (!normalized) {
+        return reply.code(400).send({ error: 'Invalid TON address format' });
+      }
     }
 
     // Look up pending payment
@@ -89,11 +89,12 @@ export default async function tonRoutes(fastify) {
       return reply.code(404).send({ error: 'No pending payment found. Please generate a new payment link.' });
     }
 
-    // Verify on-chain
+    // Verify on-chain (senderAddress optional — can verify by comment alone)
     const result = await verifyProPayment({
       senderAddress: normalized,
       tier:    pending.tier,
       comment: pending.comment,
+      receiverAddress: process.env.APP_TON_WALLET || null,
     });
 
     if (!result.verified) {

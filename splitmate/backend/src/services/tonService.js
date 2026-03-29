@@ -112,9 +112,12 @@ export async function verifyTonTransfer({
 }) {
   try {
     const normalRecipient = normalizeTonAddress(recipientAddress);
-    const normalSender    = normalizeTonAddress(senderAddress);
-    if (!normalRecipient || !normalSender) {
-      return { verified: false, reason: 'Invalid address format' };
+    const normalSender    = senderAddress ? normalizeTonAddress(senderAddress) : null;
+    if (!normalRecipient) {
+      return { verified: false, reason: 'Invalid recipient address format' };
+    }
+    if (senderAddress && !normalSender) {
+      return { verified: false, reason: 'Invalid sender address format' };
     }
 
     // Fetch last 20 incoming transactions for the recipient
@@ -134,8 +137,8 @@ export async function verifyTonTransfer({
       const inMsg = tx.in_msg;
       if (!inMsg || !inMsg.source) continue;
 
-      // Source must match sender
-      if (!isSameTonAddress(inMsg.source, normalSender)) continue;
+      // Source must match sender (if provided)
+      if (normalSender && !isSameTonAddress(inMsg.source, normalSender)) continue;
 
       // Amount check (value is in nanotons as string)
       const sentTon = fromNanoFloat(inMsg.value || '0');

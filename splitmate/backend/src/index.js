@@ -143,6 +143,9 @@ fastify.post('/api/admin/trigger-reminders', async (req, reply) => {
 // ─────────────────────────────────────────────────────────────────────────────
 const start = async () => {
   try {
+    // Run database migrations
+    await runMigrations();
+
     // Register webhook with Telegram
     const webhookUrl = `${config.APP_URL}/webhook/${config.BOT_SECRET}`;
     await bot.telegram.setWebhook(webhookUrl, {

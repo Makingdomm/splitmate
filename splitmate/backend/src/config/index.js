@@ -35,4 +35,5 @@ export const config = {
   EXCHANGE_RATES_API_KEY: optional('EXCHANGE_RATES_API_KEY', ''),
   PRO_MONTHLY_STARS:      parseInt(optional('PRO_MONTHLY_STARS', '500'), 10),
   TON_FEE_PERCENT:        parseFloat(optional('TON_FEE_PERCENT', '0.5')),
+  APP_TON_WALLET:         optional('APP_TON_WALLET', ''),      // Your TON wallet for Pro payments
 };
