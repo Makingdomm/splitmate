@@ -208,6 +208,21 @@ export default function SettleUp({ onNavigate, onToast }) {
                 </div>
               )}
 
+              {/* Nudge: recipient has no TON wallet saved */}
+              {!loadingWallets && !creditorWallets.find(w => w.chain === 'TON') && (
+                <div style={{ background:'rgba(255,200,0,0.07)', border:'1px solid rgba(255,200,0,0.18)', borderRadius:12, padding:'12px 14px', marginBottom:14, display:'flex', alignItems:'flex-start', gap:10 }}>
+                  <span style={{ fontSize:18, flexShrink:0 }}>💡</span>
+                  <div>
+                    <div style={{ fontSize:12, fontWeight:700, color:'#d4a020', marginBottom:3 }}>
+                      {to?.full_name} hasn't added a TON address yet
+                    </div>
+                    <div style={{ fontSize:11, color:'#80602a', lineHeight:1.5 }}>
+                      Ask them to open SplitMate → <b>Settings → My Crypto Wallets</b> → Add TON. Once they do, payments will auto-fill with their address.
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div style={{ fontSize:11, color:'#3a5870', lineHeight:1.6 }}>
                 Tapping <b style={{ color:'#4a90b8' }}>Pay with Wallet</b> opens Telegram's @wallet bot with the payment pre-filled. After paying, come back and tap <b style={{ color:'#4a90b8' }}>Mark as Sent</b> to record it here.
               </div>
