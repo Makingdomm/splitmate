@@ -50,7 +50,7 @@ export default function CreateGroup({ onNavigate, onToast }) {
 
   return (
     <div style={base}>
-      <style>{`.form-inp:focus{border-color:rgba(79,142,247,0.5)!important;background:rgba(79,142,247,0.08)!important;}`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} .form-inp:focus{border-color:rgba(79,142,247,0.5)!important;background:rgba(79,142,247,0.08)!important;}`}</style>
       <div style={{ position:'absolute', top:-60, left:'50%', transform:'translateX(-50%)', width:340, height:340, background:'radial-gradient(circle,rgba(59,110,246,0.13) 0%,transparent 65%)', borderRadius:'50%', pointerEvents:'none' }} />
 
       {/* Header */}
@@ -91,12 +91,21 @@ export default function CreateGroup({ onNavigate, onToast }) {
         </div>
 
         <button type="submit" disabled={submitting} style={{
-          width:'100%', height:56, background: submitting ? 'rgba(79,142,247,0.3)' : 'linear-gradient(135deg,#4f8ef7,#6a5ef7)',
-          border:'none', borderRadius:18, fontSize:16, fontWeight:800, color:'#fff', cursor:'pointer',
+          width:'100%', height:56,
+          background: submitting ? 'rgba(79,142,247,0.25)' : 'linear-gradient(135deg,#4f8ef7,#6a5ef7)',
+          border: submitting ? '1px solid rgba(79,142,247,0.3)' : 'none',
+          borderRadius:18, fontSize:16, fontWeight:800, color: submitting ? 'rgba(255,255,255,0.5)' : '#fff',
+          cursor: submitting ? 'not-allowed' : 'pointer',
           boxShadow: submitting ? 'none' : '0 4px 20px rgba(79,142,247,0.4), inset 0 1px 0 rgba(255,255,255,0.15)',
           transition:'all 0.2s',
+          display:'flex', alignItems:'center', justifyContent:'center', gap:10,
         }}>
-          {submitting ? '⏳ Creating…' : 'Create Group 🚀'}
+          {submitting ? (
+            <>
+              <span style={{ width:18, height:18, border:'2px solid rgba(79,142,247,0.4)', borderTopColor:'#4f8ef7', borderRadius:'50%', display:'inline-block', animation:'spin 0.7s linear infinite' }} />
+              Creating group…
+            </>
+          ) : 'Create Group 🚀'}
         </button>
 
         {!paymentStatus?.isPro && (
