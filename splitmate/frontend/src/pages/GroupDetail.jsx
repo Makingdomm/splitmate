@@ -10,6 +10,15 @@ const CATEGORY_EMOJI = {
 export default function GroupDetail({ onNavigate, onToast }) {
   const { activeGroup, expenses, balances, user, deleteExpense, paymentStatus, deleteGroup } = useAppStore();
   const isAdmin = activeGroup?.role === 'admin' || activeGroup?.created_by === user?.id?.toString();
+  const [myWallets, setMyWallets] = React.useState(null); // null = not loaded yet
+
+  React.useEffect(() => {
+    import('../utils/api.js').then(({ default: api }) => {
+      api.wallets.mine()
+        .then(r => setMyWallets(r.wallets || []))
+        .catch(() => setMyWallets([]));
+    });
+  }, []);
   const [tab, setTab] = useState('expenses');
 
   if (!activeGroup) { onNavigate('groups'); return null; }
@@ -251,6 +260,21 @@ export default function GroupDetail({ onNavigate, onToast }) {
       {/* ── Balances Tab ── */}
       {tab === 'balances' && balances && (
         <div style={{ padding:'0 16px', position:'relative', zIndex:1 }}>
+
+          {/* Nudge: remind user to add their own TON wallet */}
+          {myWallets !== null && !myWallets.find(w => w.chain === 'TON') && (
+            <div
+              onClick={() => onNavigate('wallet-settings')}
+              style={{ background:'rgba(0,136,204,0.08)', border:'1px solid rgba(0,136,204,0.2)', borderRadius:14, padding:'12px 14px', marginBottom:16, display:'flex', alignItems:'center', gap:12, cursor:'pointer' }}
+            >
+              <span style={{ fontSize:20 }}>💎</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:12, fontWeight:700, color:'#40a8d0', marginBottom:2 }}>Add your TON address</div>
+                <div style={{ fontSize:11, color:'#2a5870' }}>So others can pay you back instantly via Telegram Wallet</div>
+              </div>
+              <span style={{ fontSize:14, color:'#0088cc' }}>›</span>
+            </div>
+          )}
 
           {/* Who owes who */}
           <div style={{ fontSize:11, fontWeight:700, color:'#3d4870', textTransform:'uppercase', letterSpacing:0.8, marginBottom:12 }}>

@@ -72,6 +72,22 @@ export default function WalletSettings({ onNavigate, onToast }) {
           <div style={{ textAlign:'center', color:'#4a5080', padding:40 }}>Loading…</div>
         ) : (
           <>
+            {/* ── Nudge: add TON address so others can pay you ── */}
+            {!wallets.find(w => w.chain === 'TON') && !addChain && (
+              <div
+                onClick={() => setAddChain('TON')}
+                style={{ background:'linear-gradient(135deg,rgba(0,136,204,0.12),rgba(0,80,160,0.08))', border:'1px solid rgba(0,136,204,0.3)', borderRadius:18, padding:'16px 18px', marginBottom:20, cursor:'pointer', display:'flex', alignItems:'center', gap:14, position:'relative', overflow:'hidden' }}
+              >
+                <div style={{ position:'absolute', top:0, left:0, right:0, height:1, background:'linear-gradient(90deg,transparent,rgba(0,136,204,0.5),transparent)' }} />
+                <div style={{ width:46, height:46, borderRadius:14, background:'rgba(0,136,204,0.2)', border:'1px solid rgba(0,136,204,0.4)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }}>💎</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:14, fontWeight:800, color:'#60c8f0', marginBottom:3 }}>Add your TON address</div>
+                  <div style={{ fontSize:12, color:'#3a6880', lineHeight:1.5 }}>So group members can pay you back directly via Telegram Wallet — tap to add now</div>
+                </div>
+                <div style={{ fontSize:18, color:'#0088cc' }}>›</div>
+              </div>
+            )}
+
             {/* Saved wallets */}
             {wallets.length > 0 && (
               <div style={{ marginBottom:28 }}>
