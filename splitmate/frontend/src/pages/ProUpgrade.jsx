@@ -2,7 +2,7 @@ import { useState } from 'react';
 import useAppStore from '../store/appStore';
 
 export default function ProUpgrade({ onNavigate }) {
-  const { paymentStatus, upgradeToProStars, fetchPaymentStatus } = useAppStore();
+  const { paymentStatus, upgradeToProMessage, fetchPaymentStatus } = useAppStore();
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [msg, setMsg] = useState('');
@@ -11,7 +11,7 @@ export default function ProUpgrade({ onNavigate }) {
     setLoading(true);
     setMsg('');
     try {
-      await upgradeToProStars(starsAmount);
+      await upgradeToProMessage(starsAmount);
       setMsg('✅ Invoice sent! Complete payment in your Telegram chat.');
     } catch (e) {
       setMsg('❌ ' + (e.message || 'Something went wrong'));
