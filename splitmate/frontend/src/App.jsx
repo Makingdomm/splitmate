@@ -20,7 +20,23 @@ import Toast from './components/Toast.jsx';
 export default function App() {
   const { initUser, fetchGroups, fetchPaymentStatus, loading, error, clearError } = useAppStore();
   const [page, setPage] = useState('groups');
+  const [pageHistory, setPageHistory] = useState([]);
   const [initialized, setInitialized] = useState(false);
+
+  const navigateTo = (target) => {
+    if (target === -1) {
+      // Go back
+      setPageHistory(prev => {
+        const newHistory = [...prev];
+        const prev_page = newHistory.pop() || 'groups';
+        setPage(prev_page);
+        return newHistory;
+      });
+    } else {
+      setPageHistory(prev => [...prev, page]);
+      setPage(target);
+    }
+  };
   const [toast, setToast] = useState(null);
 
   // ── Bootstrap the app ──────────────────────────────────────────────────────
@@ -85,23 +101,23 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case 'groups':
-        return <GroupList onNavigate={setPage} onToast={showToast} />;
+        return <GroupList onNavigate={navigateTo} onToast={showToast} />;
       case 'group-detail':
-        return <GroupDetail onNavigate={setPage} onToast={showToast} />;
+        return <GroupDetail onNavigate={navigateTo} onToast={showToast} />;
       case 'add-expense':
-        return <AddExpense onNavigate={setPage} onToast={showToast} />;
+        return <AddExpense onNavigate={navigateTo} onToast={showToast} />;
       case 'settle':
-        return <SettleUp onNavigate={setPage} onToast={showToast} />;
+        return <SettleUp onNavigate={navigateTo} onToast={showToast} />;
       case 'wallet-settings':
-        return <WalletSettings onNavigate={setPage} onToast={showToast} />;
+        return <WalletSettings onNavigate={navigateTo} onToast={showToast} />;
       case 'create-group':
-        return <CreateGroup onNavigate={setPage} onToast={showToast} />;
+        return <CreateGroup onNavigate={navigateTo} onToast={showToast} />;
       case 'join-group':
-        return <JoinGroup onNavigate={setPage} onToast={showToast} />;
+        return <JoinGroup onNavigate={navigateTo} onToast={showToast} />;
       case 'pro':
-        return <ProUpgrade onNavigate={setPage} onToast={showToast} />;
+        return <ProUpgrade onNavigate={navigateTo} onToast={showToast} />;
       default:
-        return <GroupList onNavigate={setPage} onToast={showToast} />;
+        return <GroupList onNavigate={navigateTo} onToast={showToast} />;
     }
   };
 
@@ -110,7 +126,7 @@ export default function App() {
       <main className="page-content">
         {renderPage()}
       </main>
-      <BottomNav currentPage={page} onNavigate={setPage} />
+      <BottomNav currentPage={page} onNavigate={navigateTo} />
       {toast && (
         <Toast
           message={toast.message}

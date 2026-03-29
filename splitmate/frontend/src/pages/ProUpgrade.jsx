@@ -30,7 +30,7 @@ const TIERS = [
   },
 ];
 
-export default function ProUpgrade({ onToast }) {
+export default function ProUpgrade({ onToast, onNavigate }) {
   const { paymentStatus } = useAppStore();
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState('standard');
@@ -135,8 +135,16 @@ export default function ProUpgrade({ onToast }) {
       <div style={{ position:'absolute', bottom:80, left:'50%', transform:'translateX(-50%)', width:340, height:340, background:'radial-gradient(circle, rgba(245,176,30,0.09) 0%, transparent 65%)', borderRadius:'50%', pointerEvents:'none' }} />
 
       <div style={{ position:'relative', zIndex:1 }}>
+        {/* Back button */}
+        <div style={{ display:'flex', alignItems:'center', padding:'16px 0 8px' }}>
+          <button
+            onClick={() => onNavigate(-1)}
+            style={{ width:36, height:36, borderRadius:12, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.06)', color:'#a0b0e0', fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}
+          >‹</button>
+        </div>
+
         {/* Hero */}
-        <div style={{ textAlign:'center', paddingTop:36, paddingBottom:28 }}>
+        <div style={{ textAlign:'center', paddingTop:12, paddingBottom:28 }}>
           <h1 style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:-0.5, marginBottom:8 }}>
             Upgrade to Premium
           </h1>
