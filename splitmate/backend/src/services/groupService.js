@@ -1,5 +1,6 @@
 import { supabase } from '../db/client.js';
-import { nanoid } from 'nanoid';
+import { customAlphabet } from 'nanoid';
+const nanoid = customAlphabet('ABCDEFGHJKLMNPQRSTUVWXYZ23456789', 8); // alphanumeric only, no ambiguous chars
 
 export const createGroup = async ({ name, description, createdBy, currency = 'USD', telegramChatId = null }) => {
   const inviteCode = nanoid(8);
@@ -9,7 +10,7 @@ export const createGroup = async ({ name, description, createdBy, currency = 'US
     .insert({ name, description, created_by: createdBy, currency, invite_code: inviteCode, telegram_chat_id: telegramChatId })
     .select()
     .single();
-  if (gErr) throw new Error(gErr.message);
+  if (gErr) throw new Error(`Failed to create group: ${gErr.message} (code: ${gErr.code})`);
 
   const { error: mErr } = await supabase
     .from('group_members')
