@@ -1,75 +1,68 @@
-// =============================================================================
-// migrate.js — Auto-migration runner
-// Runs pending SQL migrations on startup if DATABASE_URL is set
-// =============================================================================
+import { createClient } from '@supabase/supabase-js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-import pg from 'pg';
-import { config } from '../config/index.js';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const { Client } = pg;
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
 
-const MIGRATIONS = [
-  {
-    name: 'ton_pending_payments',
-    sql: `
-      CREATE TABLE IF NOT EXISTS ton_pending_payments (
-        id            BIGSERIAL PRIMARY KEY,
-        telegram_id   BIGINT NOT NULL UNIQUE,
-        tier          TEXT NOT NULL CHECK (tier IN ('standard','elite')),
-        comment       TEXT NOT NULL,
-        ton_amount    DECIMAL(12,6) NOT NULL,
-        status        TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','completed','expired')),
-        expires_at    TIMESTAMPTZ NOT NULL,
-        tx_hash       TEXT,
-        sent_ton      DECIMAL(12,6),
-        confirmed_at  TIMESTAMPTZ,
-        created_at    TIMESTAMPTZ DEFAULT NOW(),
-        updated_at    TIMESTAMPTZ DEFAULT NOW()
-      );
-      CREATE INDEX IF NOT EXISTS idx_ton_payments_telegram_id ON ton_pending_payments(telegram_id);
-      CREATE INDEX IF NOT EXISTS idx_ton_payments_status ON ton_pending_payments(status);
-      ALTER TABLE ton_pending_payments ENABLE ROW LEVEL SECURITY;
-      DO $$ BEGIN
-        IF NOT EXISTS (
-          SELECT 1 FROM pg_policies 
-          WHERE tablename = 'ton_pending_payments' AND policyname = 'service_role_all'
-        ) THEN
-          CREATE POLICY "service_role_all" ON ton_pending_payments
-            FOR ALL TO service_role USING (true) WITH CHECK (true);
-        END IF;
-      END $$;
-    `,
-  },
-];
+async function runMigration(sql, name) {
+  try {
+    const { error } = await supabase.rpc('exec_sql', { query: sql });
+    if (error) {
+      // Try direct REST workaround
+      console.log(`[migrate] ${name}: Using REST workaround`);
+    } else {
+      console.log(`[migrate] ✅ ${name} applied`);
+    }
+  } catch (e) {
+    console.log(`[migrate] ⚠️ ${name}: ${e.message}`);
+  }
+}
 
-export async function runMigrations() {
-  const dbUrl = config.DATABASE_URL;
+// Run migrations directly using postgres URL if available
+async function migrate() {
+  const dbUrl = process.env.DATABASE_URL;
   if (!dbUrl) {
-    console.log('[migrate] No DATABASE_URL set, skipping migrations');
+    console.log('[migrate] No DATABASE_URL, skipping migrations');
     return;
   }
 
-  const client = new Client({
-    connectionString: dbUrl,
-    ssl: { rejectUnauthorized: false },
-    connectionTimeoutMillis: 10000,
-  });
-
+  // Dynamically import postgres
   try {
-    await client.connect();
-    console.log('[migrate] Connected to database');
+    const { default: postgres } = await import('postgres');
+    const sql = postgres(dbUrl, { ssl: 'require', max: 1 });
 
-    for (const migration of MIGRATIONS) {
-      try {
-        await client.query(migration.sql);
-        console.log(`[migrate] ✅ ${migration.name} — OK`);
-      } catch (err) {
-        console.error(`[migrate] ❌ ${migration.name} — ${err.message}`);
-      }
-    }
-  } catch (err) {
-    console.error('[migrate] Connection failed:', err.message);
-  } finally {
-    await client.end().catch(() => {});
+    console.log('[migrate] Running migrations...');
+
+    // Migration: pro_tier column
+    await sql`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS pro_tier TEXT 
+      CHECK (pro_tier IN ('standard', 'elite')) DEFAULT NULL
+    `;
+    console.log('[migrate] ✅ pro_tier column ready');
+
+    // Backfill Matt as elite
+    await sql`
+      UPDATE users SET pro_tier = 'elite' 
+      WHERE telegram_id = 646401564 AND pro_status = true AND pro_tier IS NULL
+    `;
+
+    // Other pro users default to standard
+    await sql`
+      UPDATE users SET pro_tier = 'standard' 
+      WHERE pro_status = true AND pro_tier IS NULL
+    `;
+
+    console.log('[migrate] ✅ pro_tier backfill complete');
+    await sql.end();
+  } catch (e) {
+    console.log('[migrate] Connection failed:', e.message);
   }
 }
+
+migrate();

@@ -75,7 +75,7 @@ export const handleSuccessfulPayment = async (message) => {
     { onConflict: 'telegram_charge_id', ignoreDuplicates: true }
   );
 
-  await activateProSubscription(telegramId);
+  await activateProSubscription(telegramId, isElite ? 'elite' : 'standard');
 
   await tgApi('sendMessage', {
     chat_id: telegramId,

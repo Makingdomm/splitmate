@@ -106,7 +106,7 @@ export default async function tonRoutes(fastify) {
     }
 
     // Payment confirmed! Activate Pro
-    await activateProSubscription(req.user.telegram_id);
+    await activateProSubscription(req.user.telegram_id, pending.tier || 'standard');
 
     // Mark payment as completed
     await supabase
