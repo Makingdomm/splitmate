@@ -30,11 +30,11 @@ function CopyButton({ text, onToast }) {
 }
 
 export default function SettleUp({ onNavigate, onToast }) {
-  const { activeGroup, settleDebt, paymentStatus } = useAppStore();
+  const { activeGroup, settleDebt } = useAppStore();
   const pendingSettlement = useAppStore(s => s.pendingSettlement);
 
-  const [method, setMethod]       = useState('manual'); // 'manual' | 'crypto'
-  const [cryptoMethod, setCrypto] = useState(null);     // wallet object of creditor
+  const [method, setMethod]       = useState('manual'); // 'manual' | 'wallet' | 'crypto'
+  const [cryptoMethod, setCrypto] = useState(null);
   const [txHash, setTxHash]       = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [creditorWallets, setCreditorWallets] = useState([]);
@@ -52,6 +52,30 @@ export default function SettleUp({ onNavigate, onToast }) {
 
   if (!pendingSettlement || !activeGroup) { onNavigate('group-detail'); return null; }
 
+  // ── Telegram Wallet deep-link pay ──────────────────────────────────────────
+  const openTelegramWallet = () => {
+    // Format amount as integer TON (wallet only supports TON natively)
+    // We send the user to @wallet with recipient username pre-filled
+    const recipientUsername = to?.username;
+    const amountTon = amount; // we'll show it as the amount to send
+
+    if (!recipientUsername) {
+      onToast('Recipient has no Telegram username — try crypto instead', 'error');
+      return;
+    }
+
+    // @wallet deep link: opens wallet, pre-fills send form to recipient
+    // Format: https://t.me/wallet?startattach=send&to=@username&amount=X&comment=...
+    const comment = encodeURIComponent(`SplitMate: ${activeGroup.name}`);
+    const walletUrl = `https://t.me/wallet?startattach=send&to=@${recipientUsername}&amount=${amountTon}&comment=${comment}`;
+
+    if (window.Telegram?.WebApp?.openTelegramLink) {
+      window.Telegram.WebApp.openTelegramLink(walletUrl);
+    } else {
+      window.open(walletUrl, '_blank');
+    }
+  };
+
   const handleSettle = async () => {
     setSubmitting(true);
     try {
@@ -60,7 +84,7 @@ export default function SettleUp({ onNavigate, onToast }) {
         toUserId: to.telegram_id,
         amount,
         currency: activeGroup.currency,
-        method:   method === 'crypto' ? (cryptoMethod?.chain?.toLowerCase() || 'crypto') : 'manual',
+        method:   method === 'crypto' ? (cryptoMethod?.chain?.toLowerCase() || 'crypto') : method,
         txHash:   txHash.trim() || null,
       };
       await settleDebt(settlementData);
@@ -77,8 +101,11 @@ export default function SettleUp({ onNavigate, onToast }) {
     <div style={{ minHeight:'100vh', background:'linear-gradient(180deg,#060818 0%,#0a0f2e 40%,#060818 100%)', paddingBottom:40, position:'relative', overflow:'hidden' }}>
       <style>{`
         @keyframes settle-glow{0%,100%{box-shadow:0 0 28px rgba(34,212,122,0.4)}50%{box-shadow:0 0 44px rgba(34,212,122,0.65)}}
+        @keyframes wallet-pulse{0%,100%{box-shadow:0 0 24px rgba(0,136,204,0.35)}50%{box-shadow:0 0 40px rgba(0,136,204,0.6)}}
         .settle-btn{animation:settle-glow 2.5s ease-in-out infinite;}
         .settle-btn:active{transform:scale(0.97);}
+        .wallet-pay-btn{animation:wallet-pulse 2.5s ease-in-out infinite;}
+        .wallet-pay-btn:active{transform:scale(0.97);}
         .method-card:active{transform:scale(0.985);}
         .wallet-opt:active{transform:scale(0.98);}
       `}</style>
@@ -115,39 +142,95 @@ export default function SettleUp({ onNavigate, onToast }) {
           </div>
         </div>
 
-        {/* Method selector */}
+        {/* Method selector — 3 options */}
         <div style={{ fontSize:11, fontWeight:700, color:'#3d4870', textTransform:'uppercase', letterSpacing:0.8, marginBottom:12 }}>How did you pay?</div>
-        <div style={{ display:'flex', gap:10, marginBottom:20 }}>
+        <div style={{ display:'flex', gap:8, marginBottom:20 }}>
           {[
-            { key:'manual', icon:'✓', label:'Mark Paid' },
+            { key:'manual', icon:'✓',  label:'Cash / Bank' },
+            { key:'wallet', icon:'💎', label:'TG Wallet' },
             { key:'crypto', icon:'🔑', label:'Crypto' },
           ].map(m => {
             const active = method === m.key;
+            const accentColor = m.key === 'wallet' ? '#0088cc' : '#4f8ef7';
             return (
-              <button key={m.key} onClick={() => setMethod(m.key)} style={{ flex:1, padding:'14px 10px', background: active ? 'rgba(79,142,247,0.15)' : 'rgba(255,255,255,0.03)', border: active ? '1.5px solid rgba(79,142,247,0.5)' : '1px solid rgba(255,255,255,0.07)', borderRadius:16, cursor:'pointer', textAlign:'center' }}>
-                <div style={{ fontSize:22, marginBottom:4 }}>{m.icon}</div>
-                <div style={{ fontSize:12, fontWeight:700, color: active ? '#a0c4ff' : '#6070a0' }}>{m.label}</div>
+              <button key={m.key} onClick={() => setMethod(m.key)} style={{ flex:1, padding:'14px 6px', background: active ? `${accentColor}22` : 'rgba(255,255,255,0.03)', border: active ? `1.5px solid ${accentColor}80` : '1px solid rgba(255,255,255,0.07)', borderRadius:16, cursor:'pointer', textAlign:'center', transition:'all 0.15s' }}>
+                <div style={{ fontSize:20, marginBottom:4 }}>{m.icon}</div>
+                <div style={{ fontSize:11, fontWeight:700, color: active ? (m.key === 'wallet' ? '#60c8ff' : '#a0c4ff') : '#6070a0' }}>{m.label}</div>
               </button>
             );
           })}
         </div>
 
+        {/* ── TELEGRAM WALLET FLOW ── */}
+        {method === 'wallet' && (
+          <div style={{ marginBottom:20 }}>
+            {/* Info card */}
+            <div style={{ background:'rgba(0,136,204,0.08)', border:'1px solid rgba(0,136,204,0.25)', borderRadius:20, padding:'20px 18px', marginBottom:16, position:'relative', overflow:'hidden' }}>
+              <div style={{ position:'absolute', top:0, left:0, right:0, height:1, background:'linear-gradient(90deg,transparent,rgba(0,136,204,0.5),transparent)' }} />
+              <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
+                <div style={{ width:44, height:44, borderRadius:14, background:'rgba(0,136,204,0.2)', border:'1px solid rgba(0,136,204,0.35)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }}>💎</div>
+                <div>
+                  <div style={{ fontSize:15, fontWeight:800, color:'#e8eeff' }}>Telegram Wallet</div>
+                  <div style={{ fontSize:12, color:'#4080a0' }}>Pay via @wallet bot • TON network</div>
+                </div>
+              </div>
+
+              {/* Payment details */}
+              <div style={{ background:'rgba(0,0,0,0.25)', borderRadius:12, padding:'12px 14px', marginBottom:14 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+                  <span style={{ fontSize:12, color:'#4a7090' }}>Recipient</span>
+                  <span style={{ fontSize:12, fontWeight:700, color:'#90c8e8' }}>
+                    {to?.username ? `@${to.username}` : to?.full_name}
+                  </span>
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+                  <span style={{ fontSize:12, color:'#4a7090' }}>Amount</span>
+                  <span style={{ fontSize:12, fontWeight:700, color:'#60d4a0' }}>
+                    {activeGroup.currency} {amount?.toFixed(2)}
+                  </span>
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between' }}>
+                  <span style={{ fontSize:12, color:'#4a7090' }}>Note</span>
+                  <span style={{ fontSize:12, color:'#6080a0' }}>SplitMate: {activeGroup.name}</span>
+                </div>
+              </div>
+
+              {!to?.username && (
+                <div style={{ background:'rgba(255,160,0,0.08)', border:'1px solid rgba(255,160,0,0.2)', borderRadius:10, padding:'10px 12px', marginBottom:12, fontSize:12, color:'#c09040', lineHeight:1.5 }}>
+                  ⚠️ {to?.full_name} hasn't set a Telegram username. You can still open Wallet and send manually.
+                </div>
+              )}
+
+              <div style={{ fontSize:11, color:'#3a5870', lineHeight:1.6 }}>
+                Tapping <b style={{ color:'#4a90b8' }}>Pay with Wallet</b> opens Telegram's @wallet bot with the payment pre-filled. After paying, come back and tap <b style={{ color:'#4a90b8' }}>Mark as Sent</b> to record it here.
+              </div>
+            </div>
+
+            {/* Pay button — opens @wallet */}
+            <button
+              className="wallet-pay-btn"
+              onClick={openTelegramWallet}
+              style={{ width:'100%', height:52, background:'linear-gradient(135deg,#0066aa,#0099dd)', border:'none', borderRadius:16, fontSize:15, fontWeight:800, color:'#fff', cursor:'pointer', marginBottom:10, display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}
+            >
+              <span style={{ fontSize:18 }}>💎</span> Pay with Telegram Wallet ↗
+            </button>
+          </div>
+        )}
+
         {/* ── CRYPTO FLOW ── */}
         {method === 'crypto' && (
           <div style={{ marginBottom:20 }}>
-
-            {/* Creditor's wallets */}
             {loadingWallets ? (
               <div style={{ textAlign:'center', color:'#4a5080', padding:20, background:'rgba(255,255,255,0.02)', borderRadius:16 }}>Loading {to?.full_name}'s wallets…</div>
             ) : creditorWallets.length === 0 ? (
               <div style={{ textAlign:'center', padding:'20px 16px', background:'rgba(255,80,80,0.05)', border:'1px solid rgba(255,80,80,0.12)', borderRadius:16, marginBottom:16 }}>
                 <div style={{ fontSize:28, marginBottom:8 }}>😕</div>
                 <div style={{ fontSize:14, fontWeight:700, color:'#ff8080', marginBottom:6 }}>{to?.full_name} hasn't added wallets</div>
-                <div style={{ fontSize:12, color:'#4a5080' }}>Ask them to open SplitMate Settings → My Crypto Wallets</div>
+                <div style={{ fontSize:12, color:'#4a5080' }}>Ask them to open SplitMate → Settings → My Crypto Wallets</div>
               </div>
             ) : (
               <>
-                <div style={{ fontSize:11, fontWeight:700, color:'#3d4870', textTransform:'uppercase', letterSpacing:0.8, marginBottom:10 }}>{to?.full_name}'s Wallets — choose one to pay</div>
+                <div style={{ fontSize:11, fontWeight:700, color:'#3d4870', textTransform:'uppercase', letterSpacing:0.8, marginBottom:10 }}>{to?.full_name}'s wallets — choose one</div>
                 {creditorWallets.map((w, i) => {
                   const meta = CHAIN_META[w.chain] || { icon:'🔑', color:'#4f8ef7' };
                   const active = cryptoMethod?.chain === w.chain && cryptoMethod?.address === w.address;
@@ -171,7 +254,6 @@ export default function SettleUp({ onNavigate, onToast }) {
               </>
             )}
 
-            {/* Full address display when selected */}
             {cryptoMethod && (
               <div style={{ background:`${selectedChainMeta.color || '#4f8ef7'}12`, border:`1px solid ${selectedChainMeta.color || '#4f8ef7'}33`, borderRadius:16, padding:16, marginBottom:16 }}>
                 <div style={{ fontSize:11, fontWeight:700, color:'#4a5080', textTransform:'uppercase', letterSpacing:0.7, marginBottom:8 }}>Full Address</div>
@@ -185,7 +267,6 @@ export default function SettleUp({ onNavigate, onToast }) {
               </div>
             )}
 
-            {/* TX hash input */}
             {cryptoMethod && (
               <div style={{ marginBottom:4 }}>
                 <div style={{ fontSize:11, fontWeight:700, color:'#3d4870', textTransform:'uppercase', letterSpacing:0.8, marginBottom:8 }}>Transaction Hash (optional)</div>
@@ -212,14 +293,14 @@ export default function SettleUp({ onNavigate, onToast }) {
           🔑 Manage my crypto wallets
         </button>
 
-        {/* Confirm button */}
+        {/* Confirm / Mark as Sent button */}
         <button
           className="settle-btn"
           onClick={handleSettle}
           disabled={submitting || (method === 'crypto' && creditorWallets.length > 0 && !cryptoMethod)}
           style={{ width:'100%', height:56, background: submitting ? 'rgba(34,212,122,0.2)' : 'linear-gradient(135deg,#10b458,#22d47a)', border:'none', borderRadius:18, fontSize:16, fontWeight:800, color: submitting ? '#22d47a' : '#001a0a', cursor:'pointer', transition:'transform 0.1s', opacity: (method === 'crypto' && creditorWallets.length > 0 && !cryptoMethod) ? 0.4 : 1 }}
         >
-          {submitting ? '⏳ Recording…' : method === 'crypto' && cryptoMethod ? `✅ I Sent via ${cryptoMethod.chain}` : '✅ Confirm Settlement'}
+          {submitting ? 'Recording…' : method === 'wallet' ? '✓ Mark as Sent' : 'Confirm Payment'}
         </button>
       </div>
     </div>
