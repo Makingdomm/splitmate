@@ -8,22 +8,22 @@ export default function LoadingScreen() {
         position: 'absolute',
         top: '50%', left: '50%',
         transform: 'translate(-50%, -70%)',
-        width: 200, height: 200,
-        background: 'radial-gradient(circle, rgba(79,142,247,0.15) 0%, transparent 70%)',
+        width: 220, height: 220,
+        background: 'radial-gradient(circle, rgba(79,142,247,0.18) 0%, transparent 70%)',
         borderRadius: '50%',
         pointerEvents: 'none',
       }} />
-      <div style={{
-        width: 64, height: 64,
-        background: 'linear-gradient(135deg, #4f8ef7 0%, #6a5ef7 100%)',
-        borderRadius: 18,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 30,
-        boxShadow: '0 8px 32px rgba(79,142,247,0.4)',
-        marginBottom: 4,
-      }}>
-        💸
-      </div>
+      <img
+        src="/logo.png"
+        alt="SplitMate"
+        style={{
+          width: 90, height: 90,
+          borderRadius: 24,
+          boxShadow: '0 8px 40px rgba(79,142,247,0.45)',
+          marginBottom: 6,
+          objectFit: 'cover',
+        }}
+      />
       <div className="spinner" />
       <p className="loading-text">Loading SplitMate…</p>
     </div>
