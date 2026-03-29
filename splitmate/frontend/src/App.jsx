@@ -1,8 +1,7 @@
 // =============================================================================
 // App.jsx — Root component with routing and theme setup
 // Uses Telegram's native color scheme for seamless UI integration
-// Telemetree analytics integrated — swap in real PROJECT_ID + API_KEY from
-// https://builders.ton.org → Analytics tab
+// TGAnalytics SDK integrated — token from TON Builders → Analytics tab
 // =============================================================================
 
 import React, { useEffect, useState } from 'react';
@@ -20,21 +19,24 @@ import BottomNav from './components/BottomNav.jsx';
 import LoadingScreen from './components/LoadingScreen.jsx';
 import Toast from './components/Toast.jsx';
 
-// ── Telemetree Analytics ───────────────────────────────────────────────────
-// These values come from TON Builders → your project → Analytics tab
-const TELEMETREE_PROJECT_ID = import.meta.env.VITE_TELEMETREE_PROJECT_ID || '';
-const TELEMETREE_API_KEY    = import.meta.env.VITE_TELEMETREE_API_KEY    || '';
+// ── TGAnalytics SDK ────────────────────────────────────────────────────────
+// Token from TON Builders → SplitMate → Analytics tab → "See Key"
+// appName must match the analytics identifier registered in the moderation bot
+const TG_ANALYTICS_TOKEN   = import.meta.env.VITE_TG_ANALYTICS_TOKEN || '';
+const TG_ANALYTICS_APP_NAME = import.meta.env.VITE_TG_ANALYTICS_APP_NAME || 'splitmate';
 
-// Lazy-load the SDK so it never blocks the app from rendering
-let twaAnalytics = null;
-async function initAnalytics(telegramData) {
-  if (!TELEMETREE_PROJECT_ID || !TELEMETREE_API_KEY) return;
+function initTGAnalytics() {
+  if (!TG_ANALYTICS_TOKEN) return;
   try {
-    const { TwaAnalyticsProvider } = await import('@tonsolutions/telemetree-react');
-    twaAnalytics = TwaAnalyticsProvider;
-    console.log('[Analytics] Telemetree initialized');
+    import('@telegram-apps/analytics').then(({ default: TelegramAnalytics }) => {
+      TelegramAnalytics.init({
+        token: TG_ANALYTICS_TOKEN,
+        appName: TG_ANALYTICS_APP_NAME,
+      });
+      console.log('[Analytics] TGAnalytics initialized');
+    });
   } catch (e) {
-    console.warn('[Analytics] Telemetree SDK not loaded:', e.message);
+    console.warn('[Analytics] TGAnalytics failed to load:', e.message);
   }
 }
 
@@ -43,7 +45,6 @@ export default function App() {
   const [page, setPage] = useState('groups');
   const [pageHistory, setPageHistory] = useState([]);
   const [initialized, setInitialized] = useState(false);
-  const [telegramData, setTelegramData] = useState(null);
 
   const navigateTo = (target) => {
     if (target === -1) {
@@ -63,27 +64,15 @@ export default function App() {
   // ── Bootstrap the app ──────────────────────────────────────────────────────
   useEffect(() => {
     const init = async () => {
+      // Init analytics FIRST before anything renders
+      initTGAnalytics();
+
       initUser();
 
       const tg = window.Telegram?.WebApp;
       if (tg) {
         tg.ready();
         tg.expand();
-
-        // Collect Telegram init data for analytics
-        const initData = tg.initDataUnsafe || {};
-        const tgData = {
-          query_id:      initData.query_id,
-          user:          initData.user,
-          chat_type:     initData.chat_type,
-          chat_instance: initData.chat_instance,
-          start_param:   initData.start_param,
-          auth_date:     initData.auth_date,
-          hash:          initData.hash,
-          platform:      tg.platform,
-        };
-        setTelegramData(tgData);
-        initAnalytics(tgData);
       }
 
       try {
@@ -146,7 +135,7 @@ export default function App() {
     }
   };
 
-  const AppContent = (
+  return (
     <div className="app">
       <main className="page-content">
         {renderPage()}
@@ -161,20 +150,4 @@ export default function App() {
       )}
     </div>
   );
-
-  // If analytics SDK loaded and we have credentials, wrap with provider
-  if (twaAnalytics && TELEMETREE_PROJECT_ID && TELEMETREE_API_KEY) {
-    const TwaAnalyticsProvider = twaAnalytics;
-    return (
-      <TwaAnalyticsProvider
-        projectId={TELEMETREE_PROJECT_ID}
-        apiKey={TELEMETREE_API_KEY}
-        telegramWebAppData={telegramData}
-      >
-        {AppContent}
-      </TwaAnalyticsProvider>
-    );
-  }
-
-  return AppContent;
 }
