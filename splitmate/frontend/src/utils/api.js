@@ -84,6 +84,14 @@ export const api = {
     upgrade:    (starsAmount) => request('POST', '/api/payments/invoice', { starsAmount }),
     currencies: ()     => request('GET',  '/api/payments/currencies'),
   },
+  // TON payments
+  ton: {
+    price:      ()                          => request('GET',  '/api/ton/price'),
+    proLink:    (tier)                      => request('POST', '/api/ton/pro-link', { tier }),
+    verifyPro:  (senderAddress)             => request('POST', '/api/ton/verify-pro', { senderAddress }),
+    balance:    (address)                   => request('GET',  `/api/ton/balance/${address}`),
+  },
+
 };
 
 export default api;
