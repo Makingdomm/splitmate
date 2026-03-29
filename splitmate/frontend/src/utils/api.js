@@ -3,7 +3,7 @@
 // Automatically attaches Telegram initData to every request for authentication
 // =============================================================================
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || 'https://splitmate-production-9382.up.railway.app';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // getInitData — Get the raw initData string from Telegram WebApp
