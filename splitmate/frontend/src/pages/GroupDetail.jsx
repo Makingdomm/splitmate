@@ -92,9 +92,9 @@ export default function GroupDetail({ onNavigate, onToast }) {
         <button
           onClick={() => {
             const inviteLink = `https://t.me/SplitMateBot?start=group_${activeGroup.invite_code}`;
-            const shareText = `Join my expense group "${activeGroup.name}" on SplitMate!\n\n${inviteLink}`;
-            // Use Telegram's native share — opens forward/share sheet
-            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(`Join my expense group "${activeGroup.name}" on SplitMate!`)}`;
+            const fullText = `Join my expense group "${activeGroup.name}" on SplitMate!\n\n${inviteLink}`;
+            // Put EVERYTHING in text param — Telegram share sheet shows only text, not url
+            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(fullText)}`;
             if (window.Telegram?.WebApp?.openTelegramLink) {
               window.Telegram.WebApp.openTelegramLink(shareUrl);
             } else {
