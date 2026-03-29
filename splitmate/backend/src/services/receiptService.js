@@ -1,13 +1,14 @@
 // =============================================================================
-// services/receiptService.js — Receipt scanning via Gemini 2.5 Flash
+// services/receiptService.js — Receipt scanning via Gemini 2.0 Flash
 // Accepts a base64 image, returns structured expense data
 // =============================================================================
 
 import { config } from '../config/index.js';
 
-const GEMINI_API = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${config.GEMINI_API_KEY}`;
+const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_API = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${config.GEMINI_API_KEY}`;
 
-const PROMPT = `You are a receipt parser. Extract the following from this receipt image and return ONLY valid JSON — no markdown, no explanation.
+const PROMPT = `You are a receipt parser. Extract the following from this receipt image and return ONLY valid JSON — no markdown, no explanation, no code fences.
 
 Return this exact structure:
 {
@@ -31,6 +32,10 @@ Rules:
 - If you cannot read the receipt, return { "error": "Cannot read receipt" }`;
 
 export const scanReceipt = async (base64Image, mimeType = 'image/jpeg') => {
+  if (!config.GEMINI_API_KEY) {
+    throw new Error('Receipt scanning is not configured. Please contact support.');
+  }
+
   const response = await fetch(GEMINI_API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -44,24 +49,60 @@ export const scanReceipt = async (base64Image, mimeType = 'image/jpeg') => {
       generationConfig: {
         temperature: 0.1,
         maxOutputTokens: 1024,
-      }
+      },
+      safetySettings: [
+        { category: 'HARM_CATEGORY_HARASSMENT',        threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_HATE_SPEECH',       threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+      ],
     }),
   });
 
   if (!response.ok) {
-    const err = await response.json();
-    throw new Error(`Gemini API error: ${err.error?.message || response.status}`);
+    const err = await response.json().catch(() => ({}));
+    const msg = err.error?.message || `HTTP ${response.status}`;
+    console.error('[Gemini] API error:', msg);
+    throw new Error(`Receipt scanning failed: ${msg}`);
   }
 
   const data = await response.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Empty response from Gemini');
+  if (!text) throw new Error('Could not read receipt. Please try a clearer photo.');
 
-  // Strip any accidental markdown code fences
-  const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  // Strip any accidental markdown code fences Gemini might add
+  const clean = text
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
 
-  const parsed = JSON.parse(clean);
+  let parsed;
+  try {
+    parsed = JSON.parse(clean);
+  } catch {
+    console.error('[Gemini] Failed to parse response as JSON:', clean.slice(0, 200));
+    throw new Error('Could not parse receipt data. Please try a clearer photo.');
+  }
+
   if (parsed.error) throw new Error(parsed.error);
 
-  return parsed;
+  // Sanitize and validate the parsed result
+  return {
+    merchant:   typeof parsed.merchant === 'string' ? parsed.merchant.slice(0, 200) : null,
+    total:      typeof parsed.total === 'number' && parsed.total > 0 ? +parsed.total.toFixed(2) : null,
+    currency:   typeof parsed.currency === 'string' && /^[A-Z]{3}$/.test(parsed.currency) ? parsed.currency : 'USD',
+    date:       typeof parsed.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date) ? parsed.date : null,
+    category:   ['food','transport','shopping','entertainment','utilities','other'].includes(parsed.category)
+                  ? parsed.category : 'general',
+    items:      Array.isArray(parsed.items)
+                  ? parsed.items.slice(0, 20).map(item => ({
+                      name:   typeof item.name === 'string' ? item.name.slice(0, 100) : '',
+                      amount: typeof item.amount === 'number' ? +item.amount.toFixed(2) : 0,
+                    }))
+                  : [],
+    confidence: typeof parsed.confidence === 'number'
+                  ? Math.max(0, Math.min(1, parsed.confidence))
+                  : 0.5,
+  };
 };

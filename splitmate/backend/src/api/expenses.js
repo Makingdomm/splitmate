@@ -47,6 +47,9 @@ export default async function expenseRoutes(fastify) {
     if (isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
       return reply.code(400).send({ error: 'Amount must be a positive number' });
     }
+    if (parseFloat(amount) > 1_000_000) {
+      return reply.code(400).send({ error: 'Amount exceeds maximum allowed (1,000,000)' });
+    }
     if (description.trim().length > 200) {
       return reply.code(400).send({ error: 'Description too long (max 200 chars)' });
     }
@@ -117,13 +120,16 @@ export default async function expenseRoutes(fastify) {
           message: 'TON wallet settlements require SplitMate Pro.',
         });
       }
-      await recordTonSettlementFee({
-        groupId,
-        fromUserId: req.user.telegram_id,
-        toUserId:   parseInt(toUserId, 10),
-        amount:     parseFloat(amount),
-        txHash,
-      });
+      // Only record fee if txHash is provided (on-chain confirmation)
+      if (txHash) {
+        await recordTonSettlementFee({
+          groupId,
+          fromUserId: req.user.telegram_id,
+          toUserId:   parseInt(toUserId, 10),
+          amount:     parseFloat(amount),
+          txHash,
+        });
+      }
     }
 
     const settlement = await settleDebt({
@@ -190,9 +196,9 @@ export default async function expenseRoutes(fastify) {
     reply.header('Content-Disposition', `attachment; filename="splitmate-${groupId}.csv"`);
     return reply.send(csv);
   });
-}
 
   // ── GET /api/expenses/:groupId/analytics — Spending analytics (Pro only) ──
+  // FIX: was accidentally placed outside the export function — route was never registered
   fastify.get('/:groupId/analytics', async (req, reply) => {
     const { groupId } = req.params;
 
@@ -227,7 +233,11 @@ export default async function expenseRoutes(fastify) {
       byCategory[cat] = (byCategory[cat] || 0) + (e.amount_usd || 0);
     }
     const categories = Object.entries(byCategory)
-      .map(([name, total]) => ({ name, total: +total.toFixed(2), pct: +(total / totalUsd * 100).toFixed(1) }))
+      .map(([name, total]) => ({
+        name,
+        total: +total.toFixed(2),
+        pct: totalUsd > 0 ? +(total / totalUsd * 100).toFixed(1) : 0,
+      }))
       .sort((a, b) => b.total - a.total);
 
     // ── By member (who paid most) ──────────────────────────────────────────
@@ -240,6 +250,7 @@ export default async function expenseRoutes(fastify) {
       byMember[uid].paid += (e.amount_usd || 0);
       for (const s of e.expense_splits || []) {
         const sid = s.user_id?.toString();
+        if (!sid) continue;
         if (!byMember[sid]) byMember[sid] = { name: 'Member', paid: 0, owed: 0 };
         byMember[sid].owed += (s.amount_owed || 0);
       }
@@ -258,7 +269,7 @@ export default async function expenseRoutes(fastify) {
       .map(([month, total]) => ({ month, total: +total.toFixed(2) }))
       .sort((a, b) => a.month.localeCompare(b.month));
 
-    // ── Top expenses ──────────────────────────────────────────────────────
+    // ── Top 5 expenses ────────────────────────────────────────────────────
     const top5 = [...list]
       .sort((a, b) => (b.amount_usd || 0) - (a.amount_usd || 0))
       .slice(0, 5)
@@ -289,3 +300,5 @@ export default async function expenseRoutes(fastify) {
       top5,
     };
   });
+
+}

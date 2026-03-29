@@ -26,7 +26,7 @@ export const validateTelegramInitData = (initData) => {
     .update(dataCheckString)
     .digest('hex');
 
-  // Timing-safe comparison
+  // Timing-safe comparison — prevents timing attacks
   const hashBuf     = Buffer.from(hash, 'hex');
   const expectedBuf = Buffer.from(expectedHash, 'hex');
   if (hashBuf.length !== expectedBuf.length ||
@@ -34,7 +34,7 @@ export const validateTelegramInitData = (initData) => {
     throw new Error('Invalid initData signature');
   }
 
-  // Relaxed expiry: 24 hours (was 1 hour)
+  // Relaxed expiry: 24 hours
   const authDate = parseInt(params.get('auth_date'), 10);
   const now = Math.floor(Date.now() / 1000);
   if (now - authDate > 86400) {
@@ -47,6 +47,9 @@ export const validateTelegramInitData = (initData) => {
 };
 
 export const authMiddleware = async (req, reply) => {
+  // Allow routes that opt-out of auth via routeConfig
+  if (req.routeOptions?.config?.skipAuth) return;
+
   try {
     const initData = req.headers['x-telegram-init-data'];
     if (!initData) {
@@ -85,7 +88,7 @@ export const proGuard = async (req, reply) => {
 export const webhookMiddleware = async (req, reply) => {
   const secret = req.headers['x-telegram-bot-api-secret-token'];
   if (secret !== config.BOT_SECRET) {
-    console.warn('Rejected webhook with invalid secret');
+    console.warn('Rejected webhook with invalid secret from IP:', req.ip);
     return reply.code(403).send({ error: 'Forbidden' });
   }
 };

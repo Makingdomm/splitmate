@@ -4,7 +4,7 @@
 // TGAnalytics SDK integrated — token from TON Builders → Analytics tab
 // =============================================================================
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import useAppStore from './store/appStore.js';
 import GroupList from './pages/GroupList.jsx';
 import GroupDetail from './pages/GroupDetail.jsx';
@@ -20,9 +20,7 @@ import LoadingScreen from './components/LoadingScreen.jsx';
 import Toast from './components/Toast.jsx';
 
 // ── TGAnalytics SDK ────────────────────────────────────────────────────────
-// Token from TON Builders → SplitMate → Analytics tab → "See Key"
-// appName must match the analytics identifier registered in the moderation bot
-const TG_ANALYTICS_TOKEN   = import.meta.env.VITE_TG_ANALYTICS_TOKEN || '';
+const TG_ANALYTICS_TOKEN    = import.meta.env.VITE_TG_ANALYTICS_TOKEN || '';
 const TG_ANALYTICS_APP_NAME = import.meta.env.VITE_TG_ANALYTICS_APP_NAME || 'splitmate';
 
 function initTGAnalytics() {
@@ -34,9 +32,9 @@ function initTGAnalytics() {
         appName: TG_ANALYTICS_APP_NAME,
       });
       console.log('[Analytics] TGAnalytics initialized');
-    });
+    }).catch(e => console.warn('[Analytics] TGAnalytics failed:', e.message));
   } catch (e) {
-    console.warn('[Analytics] TGAnalytics failed to load:', e.message);
+    console.warn('[Analytics] TGAnalytics init error:', e.message);
   }
 }
 
@@ -45,40 +43,43 @@ export default function App() {
   const [page, setPage] = useState('groups');
   const [pageHistory, setPageHistory] = useState([]);
   const [initialized, setInitialized] = useState(false);
+  const [toast, setToast] = useState(null);
 
-  const navigateTo = (target) => {
+  const navigateTo = useCallback((target) => {
     if (target === -1) {
       setPageHistory(prev => {
         const newHistory = [...prev];
-        const prev_page = newHistory.pop() || 'groups';
-        setPage(prev_page);
+        const prevPage = newHistory.pop() || 'groups';
+        setPage(prevPage);
         return newHistory;
       });
     } else {
       setPageHistory(prev => [...prev, page]);
       setPage(target);
     }
-  };
-  const [toast, setToast] = useState(null);
+  }, [page]);
+
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ message, type, key: Date.now() });
+  }, []);
 
   // ── Bootstrap the app ──────────────────────────────────────────────────────
   useEffect(() => {
     const init = async () => {
-      // Init analytics FIRST before anything renders
       initTGAnalytics();
-
       initUser();
 
       const tg = window.Telegram?.WebApp;
       if (tg) {
         tg.ready();
         tg.expand();
+        tg.enableClosingConfirmation();
       }
 
       try {
         await Promise.all([fetchGroups(), fetchPaymentStatus()]);
       } catch (err) {
-        console.warn('Init fetch failed (likely no initData yet):', err.message);
+        console.warn('Init fetch failed:', err.message);
       }
 
       setInitialized(true);
@@ -89,49 +90,58 @@ export default function App() {
     const tg = window.Telegram?.WebApp;
     if (tg) {
       const root = document.documentElement;
-      root.style.setProperty('--tg-bg',          tg.backgroundColor || '#18181b');
-      root.style.setProperty('--tg-secondary-bg', tg.secondaryBackgroundColor || '#27272a');
-      root.style.setProperty('--tg-text',         tg.themeParams?.text_color || '#ffffff');
-      root.style.setProperty('--tg-hint',         tg.themeParams?.hint_color || '#a1a1aa');
-      root.style.setProperty('--tg-link',         tg.themeParams?.link_color || '#6366f1');
-      root.style.setProperty('--tg-button',       tg.themeParams?.button_color || '#6366f1');
-      root.style.setProperty('--tg-button-text',  tg.themeParams?.button_text_color || '#ffffff');
+      root.style.setProperty('--tg-bg',           tg.backgroundColor || '#18181b');
+      root.style.setProperty('--tg-secondary-bg',  tg.secondaryBackgroundColor || '#27272a');
+      root.style.setProperty('--tg-text',          tg.themeParams?.text_color || '#ffffff');
+      root.style.setProperty('--tg-hint',          tg.themeParams?.hint_color || '#a1a1aa');
+      root.style.setProperty('--tg-link',          tg.themeParams?.link_color || '#6366f1');
+      root.style.setProperty('--tg-button',        tg.themeParams?.button_color || '#6366f1');
+      root.style.setProperty('--tg-button-text',   tg.themeParams?.button_text_color || '#ffffff');
     }
   }, []);
 
-  // Show toast on non-auth errors
+  // Show toast on non-auth errors from store
   useEffect(() => {
     if (error) {
-      const isAuthError = error.toLowerCase().includes('unauthorized') ||
-                          error.toLowerCase().includes('missing auth') ||
-                          error.toLowerCase().includes('pattern');
+      const isAuthError = /unauthorized|missing auth|pattern/i.test(error);
       if (!isAuthError) {
-        setToast({ type: 'error', message: error });
+        showToast(error, 'error');
       }
       clearError();
     }
   }, [error]);
 
-  if (!initialized) return <LoadingScreen />;
+  // Telegram Back Button support
+  useEffect(() => {
+    const tg = window.Telegram?.WebApp;
+    if (!tg) return;
 
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
+    if (pageHistory.length > 0) {
+      tg.BackButton.show();
+    } else {
+      tg.BackButton.hide();
+    }
+
+    const handleBack = () => navigateTo(-1);
+    tg.BackButton.onClick(handleBack);
+    return () => tg.BackButton.offClick(handleBack);
+  }, [pageHistory, navigateTo]);
+
+  if (!initialized) return <LoadingScreen />;
 
   // ── Page renderer ──────────────────────────────────────────────────────────
   const renderPage = () => {
     switch (page) {
-      case 'groups':        return <GroupList onNavigate={navigateTo} onToast={showToast} />;
-      case 'group-detail':  return <GroupDetail onNavigate={navigateTo} onToast={showToast} />;
-      case 'add-expense':   return <AddExpense onNavigate={navigateTo} onToast={showToast} />;
-      case 'settle':        return <SettleUp onNavigate={navigateTo} onToast={showToast} />;
-      case 'wallet-settings': return <WalletSettings onNavigate={navigateTo} onToast={showToast} />;
-      case 'create-group':  return <CreateGroup onNavigate={navigateTo} onToast={showToast} />;
-      case 'join-group':    return <JoinGroup onNavigate={navigateTo} onToast={showToast} />;
-      case 'pro':           return <ProUpgrade onNavigate={navigateTo} onToast={showToast} />;
-      case 'analytics':     return <Analytics onNavigate={navigateTo} onToast={showToast} />;
-      default:              return <GroupList onNavigate={navigateTo} onToast={showToast} />;
+      case 'groups':          return <GroupList       onNavigate={navigateTo} onToast={showToast} />;
+      case 'group-detail':    return <GroupDetail     onNavigate={navigateTo} onToast={showToast} />;
+      case 'add-expense':     return <AddExpense      onNavigate={navigateTo} onToast={showToast} />;
+      case 'settle':          return <SettleUp        onNavigate={navigateTo} onToast={showToast} />;
+      case 'wallet-settings': return <WalletSettings  onNavigate={navigateTo} onToast={showToast} />;
+      case 'create-group':    return <CreateGroup     onNavigate={navigateTo} onToast={showToast} />;
+      case 'join-group':      return <JoinGroup       onNavigate={navigateTo} onToast={showToast} />;
+      case 'pro':             return <ProUpgrade      onNavigate={navigateTo} onToast={showToast} />;
+      case 'analytics':       return <Analytics       onNavigate={navigateTo} onToast={showToast} />;
+      default:                return <GroupList       onNavigate={navigateTo} onToast={showToast} />;
     }
   };
 
@@ -143,6 +153,7 @@ export default function App() {
       <BottomNav currentPage={page} onNavigate={navigateTo} />
       {toast && (
         <Toast
+          key={toast.key}
           message={toast.message}
           type={toast.type}
           onClose={() => setToast(null)}

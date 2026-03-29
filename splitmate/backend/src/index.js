@@ -29,6 +29,30 @@ const fastify = Fastify({
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Global error handler — catches unhandled route errors cleanly
+// ─────────────────────────────────────────────────────────────────────────────
+fastify.setErrorHandler((err, req, reply) => {
+  console.error(`[ERROR] ${req.method} ${req.url}:`, err.message);
+
+  // Fastify validation errors
+  if (err.validation) {
+    return reply.code(400).send({ error: 'VALIDATION_ERROR', message: err.message });
+  }
+
+  // Rate limit errors
+  if (err.statusCode === 429) {
+    return reply.code(429).send({ error: 'TOO_MANY_REQUESTS', message: 'Too many requests. Please slow down.' });
+  }
+
+  // Don't leak internal errors to client
+  const statusCode = err.statusCode || 500;
+  reply.code(statusCode).send({
+    error: statusCode === 500 ? 'INTERNAL_ERROR' : err.code || 'ERROR',
+    message: statusCode === 500 ? 'An internal error occurred' : err.message,
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Global plugins
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -40,10 +64,13 @@ await fastify.register(cors, {
     const allowed = [
       config.MINI_APP_URL,
       'https://web.telegram.org',
+      'https://webk.telegram.org',
+      'https://webz.telegram.org',
     ];
     const isAllowed =
       allowed.some(u => origin === u || origin.startsWith(u)) ||
-      /https:\/\/frontend.*vercel\.app$/.test(origin);
+      /https:\/\/frontend.*vercel\.app$/.test(origin) ||
+      /https:\/\/.*\.vercel\.app$/.test(origin);
     cb(null, isAllowed);
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -58,10 +85,10 @@ await fastify.register(helmet, {
 
 // Rate limiting — protect against abuse
 await fastify.register(rateLimit, {
-  max: 120,           // 120 requests per minute per IP
+  max: 120,           // 120 requests per minute per IP/user
   timeWindow: '1 minute',
   keyGenerator: (req) => {
-    // Use telegram_id from header for more accurate per-user limiting
+    // Use telegram_id for more accurate per-user limiting
     const initData = req.headers['x-telegram-init-data'] || '';
     const match = initData.match(/user=%7B%22id%22%3A(\d+)/);
     return match ? `user_${match[1]}` : req.ip;
@@ -77,7 +104,7 @@ await fastify.register(rateLimit, {
 // ─────────────────────────────────────────────────────────────────────────────
 fastify.get('/health', async () => ({
   status: 'ok',
-  version: '1.0.0',
+  version: '1.0.1',
   timestamp: new Date().toISOString(),
 }));
 
@@ -94,7 +121,7 @@ fastify.post(
       return reply.code(200).send({ ok: true });
     } catch (err) {
       console.error('Webhook handling error:', err);
-      // Always return 200 to Telegram — otherwise it will retry
+      // Always return 200 to Telegram — otherwise it will retry endlessly
       return reply.code(200).send({ ok: false });
     }
   }
@@ -102,9 +129,10 @@ fastify.post(
 
 // ─────────────────────────────────────────────────────────────────────────────
 // API Routes — all require authentication via Telegram initData
+// (except routes that set config.skipAuth = true)
 // ─────────────────────────────────────────────────────────────────────────────
 fastify.register(async (instance) => {
-  // Apply auth middleware to all /api/* routes
+  // Apply auth middleware to all /api/* routes (skipAuth routes opt out)
   instance.addHook('preHandler', authMiddleware);
 
   instance.register(groupRoutes,   { prefix: '/api/groups' });
@@ -122,9 +150,10 @@ fastify.register(async (instance) => {
 // Send debt reminders daily at 10:00 AM UTC
 cron.schedule('0 10 * * *', async () => {
   try {
+    console.log('[CRON] Running daily debt reminders...');
     await sendDebtReminders();
   } catch (err) {
-    console.error('Reminder job failed:', err);
+    console.error('[CRON] Reminder job failed:', err);
   }
 });
 
@@ -136,6 +165,34 @@ fastify.post('/api/admin/trigger-reminders', async (req, reply) => {
   if (secret !== config.BOT_SECRET) return reply.code(401).send({ error: 'Unauthorized' });
   await sendDebtReminders();
   return { success: true, message: 'Reminders triggered' };
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Graceful shutdown
+// ─────────────────────────────────────────────────────────────────────────────
+const shutdown = async (signal) => {
+  console.log(`[SHUTDOWN] Received ${signal}, closing server...`);
+  try {
+    await fastify.close();
+    console.log('[SHUTDOWN] Server closed cleanly');
+    process.exit(0);
+  } catch (err) {
+    console.error('[SHUTDOWN] Error during shutdown:', err);
+    process.exit(1);
+  }
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT',  () => shutdown('SIGINT'));
+
+// Handle uncaught errors to prevent silent crashes
+process.on('uncaughtException', (err) => {
+  console.error('[UNCAUGHT EXCEPTION]', err);
+  // Don't exit — Railway will restart on crash; log and continue
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[UNHANDLED REJECTION]', reason);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -169,4 +226,3 @@ const start = async () => {
 };
 
 start();
-
