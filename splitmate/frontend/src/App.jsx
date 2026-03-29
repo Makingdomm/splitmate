@@ -8,7 +8,8 @@ import useAppStore from './store/appStore.js';
 import GroupList from './pages/GroupList.jsx';
 import GroupDetail from './pages/GroupDetail.jsx';
 import AddExpense from './pages/AddExpense.jsx';
-import SettleUp from './pages/SettleUp.jsx';
+import SettleUp         from './pages/SettleUp.jsx';
+import WalletSettings  from './pages/WalletSettings.jsx';
 import ProUpgrade from './pages/ProUpgrade.jsx';
 import CreateGroup from './pages/CreateGroup.jsx';
 import JoinGroup from './pages/JoinGroup.jsx';
@@ -91,6 +92,8 @@ export default function App() {
         return <AddExpense onNavigate={setPage} onToast={showToast} />;
       case 'settle':
         return <SettleUp onNavigate={setPage} onToast={showToast} />;
+      case 'wallet-settings':
+        return <WalletSettings onNavigate={setPage} onToast={showToast} />;
       case 'create-group':
         return <CreateGroup onNavigate={setPage} onToast={showToast} />;
       case 'join-group':

@@ -66,6 +66,14 @@ export const api = {
     delete:  (id)     => request('DELETE', `/api/expenses/${id}`),
   },
 
+  // Wallets
+  wallets: {
+    mine:      ()           => request('GET', '/api/wallets'),
+    save:      (wallets)    => request('PUT', '/api/wallets', { wallets }),
+    ofUser:    (telegramId) => request('GET', `/api/wallets/user/${telegramId}`),
+    chains:    ()           => request('GET', '/api/wallets/chains'),
+  },
+
   // Payments
   receipts: {
     scan: (image, mimeType) => request('POST', '/api/receipts/scan', { image, mimeType }),

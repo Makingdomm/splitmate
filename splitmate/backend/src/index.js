@@ -14,6 +14,7 @@ import groupRoutes from './api/groups.js';
 import expenseRoutes from './api/expenses.js';
 import paymentRoutes from './api/payments.js';
 import receiptRoutes from './api/receipts.js';
+import walletRoutes  from './api/wallets.js';
 import cron from 'node-cron';
 import { sendDebtReminders } from './bot/reminders.js';
 
@@ -108,6 +109,7 @@ fastify.register(async (instance) => {
   instance.register(expenseRoutes, { prefix: '/api/expenses' });
   instance.register(paymentRoutes, { prefix: '/api/payments' });
   instance.register(receiptRoutes, { prefix: '/api/receipts' });
+  instance.register(walletRoutes,  { prefix: '/api/wallets' });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

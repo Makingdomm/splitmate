@@ -117,6 +117,15 @@ export default function GroupDetail({ onNavigate, onToast }) {
           }}
           title="Export CSV"
         >📊</button>
+        <button
+          onClick={() => onNavigate('wallet-settings')}
+          style={{
+            width:36, height:36, borderRadius:12, border:'1px solid rgba(153,69,255,0.3)',
+            background:'rgba(153,69,255,0.1)', color:'#bb88ff', fontSize:14,
+            cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+          }}
+          title="My Wallets"
+        >🔑</button>
       </div>
 
       {/* ── Tab Bar ── */}
