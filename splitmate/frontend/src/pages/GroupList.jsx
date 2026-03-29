@@ -48,13 +48,15 @@ export default function GroupList({ onNavigate, onToast }) {
 
         {/* ── Header ── */}
         <div style={{ display:'flex', alignItems:'center', gap:14, paddingTop:28, paddingBottom:20 }}>
-          <div style={{
-            width:48, height:48, borderRadius:16,
-            background:'linear-gradient(135deg, #4f8ef7 0%, #6a5ef7 100%)',
-            display:'flex', alignItems:'center', justifyContent:'center',
-            fontSize:24, flexShrink:0,
-            boxShadow:'0 4px 16px rgba(79,142,247,0.4)',
-          }}>💸</div>
+          <img
+            src="https://media.base44.com/images/public/69c82e5c9cc68a413bb16ff9/ee1057a35_generated_image.png"
+            alt="SplitMate"
+            style={{
+              width:48, height:48, borderRadius:16, flexShrink:0,
+              boxShadow:'0 4px 16px rgba(79,142,247,0.4)',
+              objectFit:'cover',
+            }}
+          />
           <div>
             <h1 style={{ fontSize:22, fontWeight:900, color:'#fff', letterSpacing:-0.3, marginBottom:2 }}>SplitMate</h1>
             <p style={{ fontSize:13, color:'#6070a0', fontWeight:500 }}>
