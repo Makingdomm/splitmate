@@ -141,6 +141,7 @@ fastify.register(async (instance) => {
   instance.register(receiptRoutes, { prefix: '/api/receipts' });
   instance.register(walletRoutes,  { prefix: '/api/wallets' });
   instance.register(tonRoutes,     { prefix: '/api/ton' });
+  instance.register((await import('./api/admin.js')).default, { prefix: '/api/admin' });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
