@@ -18,6 +18,7 @@ import walletRoutes  from './api/wallets.js';
 import tonRoutes     from './api/ton.js';
 import cron from 'node-cron';
 import { sendDebtReminders } from './bot/reminders.js';
+import { runMigrations } from './db/migrate.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Create Fastify instance
