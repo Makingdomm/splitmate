@@ -1,10 +1,11 @@
 // =============================================================================
 // main.jsx — React app entry point
-// Initializes Telegram Mini App SDK before rendering
+// Initializes Telegram Mini App SDK and TON Connect before rendering
 // =============================================================================
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { TonConnectUIProvider } from '@tonconnect/ui-react';
 import App from './App.jsx';
 import './index.css';
 
@@ -16,8 +17,13 @@ if (window.Telegram?.WebApp) {
   tg.expand(); // Expand to full available height
 }
 
+// TON Connect manifest — tells wallets what app is requesting connection
+const MANIFEST_URL = `${window.location.origin}/tonconnect-manifest.json`;
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
+    <TonConnectUIProvider manifestUrl={MANIFEST_URL}>
+      <App />
+    </TonConnectUIProvider>
   </React.StrictMode>
 );
