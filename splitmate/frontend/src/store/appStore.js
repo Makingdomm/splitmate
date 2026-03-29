@@ -19,6 +19,7 @@ const useAppStore = create((set, get) => ({
   paymentStatus: null,
   loading:       false,
   error:         null,
+  draftExpenseForm: null,
 
   initUser: () => {
     const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -118,6 +119,8 @@ const useAppStore = create((set, get) => ({
   },
 
   clearError: () => set({ error: null }),
+  setDraftExpenseForm: (form) => set({ draftExpenseForm: form }),
+  clearDraftExpenseForm: () => set({ draftExpenseForm: null }),
 }));
 
 export default useAppStore;

@@ -23,13 +23,17 @@ const inp = {
 };
 
 export default function AddExpense({ onNavigate, onToast }) {
-  const { activeGroup, user, addExpense, paymentStatus } = useAppStore();
+  const { activeGroup, user, addExpense, paymentStatus, draftExpenseForm, setDraftExpenseForm, clearDraftExpenseForm } = useAppStore();
   const [members, setMembers]       = useState([]);
   const [currencies, setCurrencies] = useState([]);
-  const [form, setForm] = useState({
-    description: '', amount: '',
-    currency: activeGroup?.currency || 'USD',
-    category: 'general', paidBy: user?.id?.toString() || '', splitType: 'equal',
+  const [form, setForm] = useState(() => {
+    // Restore draft if it exists (user came back from Pro page)
+    if (draftExpenseForm) return draftExpenseForm;
+    return {
+      description: '', amount: '',
+      currency: activeGroup?.currency || 'USD',
+      category: 'general', paidBy: user?.id?.toString() || '', splitType: 'equal',
+    };
   });
   const [submitting, setSubmitting]   = useState(false);
   const [scanning, setScanning]       = useState(false);
@@ -57,7 +61,7 @@ export default function AddExpense({ onNavigate, onToast }) {
     if (!file) return;
 
     // Check Pro
-    if (!paymentStatus?.isPro) { onNavigate('pro'); return; }
+    if (!paymentStatus?.isPro) { setDraftExpenseForm(form); onNavigate('pro'); return; }
 
     setScanning(true);
     setScanResult(null);
@@ -77,7 +81,7 @@ export default function AddExpense({ onNavigate, onToast }) {
       setScanResult(data);
       onToast(`✅ Receipt scanned — ${data.merchant || 'details filled in'}!`);
     } catch (err) {
-      if (err.code === 'PRO_REQUIRED') { onNavigate('pro'); return; }
+      if (err.code === 'PRO_REQUIRED') { setDraftExpenseForm(form); onNavigate('pro'); return; }
       onToast(err.message || 'Could not read receipt. Try a clearer photo.', 'error');
     } finally {
       setScanning(false);
@@ -92,10 +96,11 @@ export default function AddExpense({ onNavigate, onToast }) {
     setSubmitting(true);
     try {
       await addExpense({ groupId: activeGroup.id, description: form.description.trim(), amount: parseFloat(form.amount), currency: form.currency, category: form.category, splitType: form.splitType, paidBy: parseInt(form.paidBy, 10) });
+      clearDraftExpenseForm();
       onToast('Expense added! 💸');
       onNavigate('group-detail');
     } catch (err) {
-      err.code === 'PRO_REQUIRED' ? onNavigate('pro') : onToast(err.message, 'error');
+      err.code === 'PRO_REQUIRED' ? (setDraftExpenseForm(form), onNavigate('pro')) : onToast(err.message, 'error');
     } finally { setSubmitting(false); }
   };
 
@@ -108,7 +113,7 @@ export default function AddExpense({ onNavigate, onToast }) {
 
       {/* Header */}
       <div style={{ display:'flex', alignItems:'center', gap:12, padding:'20px 16px 20px', position:'relative', zIndex:1 }}>
-        <button onClick={() => onNavigate('group-detail')} style={{ width:36, height:36, borderRadius:12, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.06)', color:'#a0b0e0', fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>‹</button>
+        <button onClick={() => { clearDraftExpenseForm(); onNavigate('group-detail'); }} style={{ width:36, height:36, borderRadius:12, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.06)', color:'#a0b0e0', fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>‹</button>
         <div style={{ flex:1 }}>
           <h1 style={{ fontSize:20, fontWeight:900, color:'#fff', letterSpacing:-0.3 }}>Add Expense</h1>
           <p style={{ fontSize:12, color:'#4a5080' }}>{activeGroup.name}</p>
@@ -218,7 +223,7 @@ export default function AddExpense({ onNavigate, onToast }) {
               const locked = opt.pro && !paymentStatus?.isPro;
               return (
                 <button key={opt.key} type="button" className="split-opt"
-                  onClick={() => locked ? onNavigate('pro') : set('splitType', opt.key)}
+                  onClick={() => locked ? (setDraftExpenseForm(form), onNavigate('pro')) : set('splitType', opt.key)}
                   style={{
                     flex:1, height:44, borderRadius:12,
                     border: active ? '1.5px solid rgba(79,142,247,0.6)' : '1px solid rgba(255,255,255,0.08)',
