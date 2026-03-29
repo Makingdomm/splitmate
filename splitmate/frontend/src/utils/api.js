@@ -62,9 +62,11 @@ export const api = {
   expenses: {
     list:    (groupId, limit, offset) =>
       request('GET', `/api/expenses/${groupId}?limit=${limit}&offset=${offset}`),
-    add:     (data)   => request('POST',   '/api/expenses', data),
-    settle:  (data)   => request('POST',   '/api/expenses/settle', data),
-    delete:  (id)     => request('DELETE', `/api/expenses/${id}`),
+    add:      (data)     => request('POST',   '/api/expenses', data),
+    settle:   (data)     => request('POST',   '/api/expenses/settle', data),
+    delete:   (id)       => request('DELETE', `/api/expenses/${id}`),
+    export:   (groupId)  => request('GET',    `/api/expenses/${groupId}/export`),
+    analytics:(groupId)  => request('GET',    `/api/expenses/${groupId}/analytics`),
   },
 
   // Wallets

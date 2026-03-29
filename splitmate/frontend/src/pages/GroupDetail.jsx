@@ -147,6 +147,15 @@ export default function GroupDetail({ onNavigate, onToast }) {
           >🗑</button>
         )}
         <button
+          onClick={() => onNavigate('analytics')}
+          style={{
+            width:36, height:36, borderRadius:12, border:'1px solid rgba(79,163,255,0.3)',
+            background:'rgba(79,163,255,0.1)', color:'#4fa3ff', fontSize:14,
+            cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+          }}
+          title="Analytics"
+        >📊</button>
+        <button
           onClick={handleExport}
           style={{
             width:36, height:36, borderRadius:12, border:'1px solid rgba(34,197,94,0.3)',
@@ -154,7 +163,7 @@ export default function GroupDetail({ onNavigate, onToast }) {
             cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
           }}
           title="Export CSV"
-        >📊</button>
+        >📥</button>
         <button
           onClick={() => onNavigate('wallet-settings')}
           style={{

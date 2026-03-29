@@ -191,3 +191,101 @@ export default async function expenseRoutes(fastify) {
     return reply.send(csv);
   });
 }
+
+  // ── GET /api/expenses/:groupId/analytics — Spending analytics (Pro only) ──
+  fastify.get('/:groupId/analytics', async (req, reply) => {
+    const { groupId } = req.params;
+
+    const member = await isMember(groupId, req.user.telegram_id);
+    if (!member) return reply.code(403).send({ error: 'Not a member of this group' });
+
+    const isPro = await isProUser(req.user.telegram_id);
+    if (!isPro) return reply.code(403).send({ error: 'PRO_REQUIRED', message: 'Analytics is a Pro feature.' });
+
+    // Fetch all expenses with splits
+    const { data: expenses, error } = await supabase
+      .from('expenses')
+      .select(`
+        id, description, amount, currency, amount_usd, category, created_at,
+        users!paid_by (id, full_name, username),
+        expense_splits (user_id, amount_owed, is_settled)
+      `)
+      .eq('group_id', groupId)
+      .order('created_at', { ascending: true });
+
+    if (error) return reply.code(500).send({ error: 'Failed to fetch analytics' });
+
+    const list = expenses || [];
+
+    // ── Total spent (USD) ──────────────────────────────────────────────────
+    const totalUsd = list.reduce((s, e) => s + (e.amount_usd || 0), 0);
+
+    // ── By category ───────────────────────────────────────────────────────
+    const byCategory = {};
+    for (const e of list) {
+      const cat = e.category || 'other';
+      byCategory[cat] = (byCategory[cat] || 0) + (e.amount_usd || 0);
+    }
+    const categories = Object.entries(byCategory)
+      .map(([name, total]) => ({ name, total: +total.toFixed(2), pct: +(total / totalUsd * 100).toFixed(1) }))
+      .sort((a, b) => b.total - a.total);
+
+    // ── By member (who paid most) ──────────────────────────────────────────
+    const byMember = {};
+    for (const e of list) {
+      const uid = e.users?.id?.toString();
+      const name = e.users?.full_name || e.users?.username || 'Unknown';
+      if (!uid) continue;
+      if (!byMember[uid]) byMember[uid] = { name, paid: 0, owed: 0 };
+      byMember[uid].paid += (e.amount_usd || 0);
+      for (const s of e.expense_splits || []) {
+        const sid = s.user_id?.toString();
+        if (!byMember[sid]) byMember[sid] = { name: 'Member', paid: 0, owed: 0 };
+        byMember[sid].owed += (s.amount_owed || 0);
+      }
+    }
+    const members = Object.entries(byMember)
+      .map(([id, d]) => ({ id, name: d.name, paid: +d.paid.toFixed(2), owed: +d.owed.toFixed(2) }))
+      .sort((a, b) => b.paid - a.paid);
+
+    // ── By month (spending over time) ─────────────────────────────────────
+    const byMonth = {};
+    for (const e of list) {
+      const month = e.created_at?.slice(0, 7) || 'unknown'; // YYYY-MM
+      byMonth[month] = (byMonth[month] || 0) + (e.amount_usd || 0);
+    }
+    const timeline = Object.entries(byMonth)
+      .map(([month, total]) => ({ month, total: +total.toFixed(2) }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+
+    // ── Top expenses ──────────────────────────────────────────────────────
+    const top5 = [...list]
+      .sort((a, b) => (b.amount_usd || 0) - (a.amount_usd || 0))
+      .slice(0, 5)
+      .map(e => ({
+        description: e.description,
+        amount: e.amount,
+        currency: e.currency,
+        amountUsd: e.amount_usd,
+        category: e.category,
+        paidBy: e.users?.full_name || e.users?.username || 'Unknown',
+        date: e.created_at?.slice(0, 10),
+      }));
+
+    // ── Settlement rate ────────────────────────────────────────────────────
+    const allSplits = list.flatMap(e => e.expense_splits || []);
+    const settledCount = allSplits.filter(s => s.is_settled).length;
+    const settlementRate = allSplits.length > 0
+      ? +(settledCount / allSplits.length * 100).toFixed(1)
+      : 100;
+
+    return {
+      totalUsd: +totalUsd.toFixed(2),
+      expenseCount: list.length,
+      settlementRate,
+      categories,
+      members,
+      timeline,
+      top5,
+    };
+  });

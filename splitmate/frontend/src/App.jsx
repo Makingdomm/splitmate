@@ -15,6 +15,7 @@ import WalletSettings  from './pages/WalletSettings.jsx';
 import ProUpgrade from './pages/ProUpgrade.jsx';
 import CreateGroup from './pages/CreateGroup.jsx';
 import JoinGroup from './pages/JoinGroup.jsx';
+import Analytics from './pages/Analytics.jsx';
 import BottomNav from './components/BottomNav.jsx';
 import LoadingScreen from './components/LoadingScreen.jsx';
 import Toast from './components/Toast.jsx';
@@ -140,6 +141,7 @@ export default function App() {
       case 'create-group':  return <CreateGroup onNavigate={navigateTo} onToast={showToast} />;
       case 'join-group':    return <JoinGroup onNavigate={navigateTo} onToast={showToast} />;
       case 'pro':           return <ProUpgrade onNavigate={navigateTo} onToast={showToast} />;
+      case 'analytics':     return <Analytics onNavigate={navigateTo} onToast={showToast} />;
       default:              return <GroupList onNavigate={navigateTo} onToast={showToast} />;
     }
   };
