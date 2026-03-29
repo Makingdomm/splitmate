@@ -777,15 +777,4 @@ html, body {
 .mb-8  { margin-bottom: 8px; }
 .bold  { font-weight: 700; }
 
-/* ── Telegram Fullscreen safe area support (Bot API 8.0) ── */
-/* Use Telegram's own CSS vars when in fullscreen; fall back to 0 */
-:root {
-  --tg-safe-top: var(--tg-content-safe-area-inset-top, 0px);
-  --tg-safe-bottom: var(--tg-content-safe-area-inset-bottom, 0px);
-}
 
-/* No padding on #root — let each page handle its own top offset */
-#root {
-  padding-top: 0;
-  padding-bottom: 0;
-}

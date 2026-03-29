@@ -13,19 +13,7 @@ import './index.css';
 if (window.Telegram?.WebApp) {
   const tg = window.Telegram.WebApp;
   tg.ready();
-  tg.expand(); // expand to full height (legacy)
-
-  // Bot API 8.0+: request true fullscreen (no top bar / launch button)
-  if (typeof tg.requestFullscreen === 'function') {
-    tg.requestFullscreen();
-  }
-
-  // Re-request on fullscreen change events (some devices need this)
-  tg.onEvent?.('fullscreenChanged', () => {
-    if (!tg.isFullscreen && typeof tg.requestFullscreen === 'function') {
-      tg.requestFullscreen();
-    }
-  });
+  tg.expand(); // Expand to full available height
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(
