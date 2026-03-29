@@ -170,7 +170,7 @@ export default function AddExpense({ onNavigate, onToast }) {
         <div style={{ display:'flex', gap:10, marginBottom:16 }}>
           <div style={{ flex:2 }}>
             <label style={{ fontSize:11, fontWeight:700, color:'#3d4870', textTransform:'uppercase', letterSpacing:0.8, display:'block', marginBottom:8 }}>Amount</label>
-            <input className="form-inp" style={inp} type="number" placeholder="0.00" value={form.amount} onChange={e => set('amount', e.target.value)} min="0.01" step="0.01" inputMode="decimal" />
+            <input className="form-inp" style={inp} type="text" placeholder="0.00" value={form.amount} onChange={e => set('amount', e.target.value)} min="0.01" step="0.01" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" />
           </div>
           <div style={{ flex:1 }}>
             <label style={{ fontSize:11, fontWeight:700, color:'#3d4870', textTransform:'uppercase', letterSpacing:0.8, display:'block', marginBottom:8 }}>Currency</label>
