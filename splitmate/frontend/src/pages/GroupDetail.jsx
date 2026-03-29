@@ -92,7 +92,7 @@ export default function GroupDetail({ onNavigate, onToast }) {
         <button
           onClick={() => {
             const inviteLink = `https://t.me/SplitMateBot?start=group_${activeGroup.invite_code}`;
-            const fullText = `Join my expense group "${activeGroup.name}" on SplitMate!\n\n${inviteLink}`;
+            const fullText = `Join my expense group "${activeGroup.name}" on SplitMate!\n\n🔗 ${inviteLink}\n\n📋 Invite code: ${activeGroup.invite_code}`;
             // Put EVERYTHING in text param — Telegram share sheet shows only text, not url
             const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(fullText)}`;
             if (window.Telegram?.WebApp?.openTelegramLink) {
