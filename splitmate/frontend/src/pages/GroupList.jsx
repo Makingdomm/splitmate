@@ -47,7 +47,7 @@ export default function GroupList({ onNavigate, onToast }) {
       <div style={{ position:'relative', zIndex:1 }}>
 
         {/* ── Header ── */}
-        <div style={{ display:'flex', alignItems:'center', gap:14, paddingTop:28, paddingBottom:20 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:14, paddingTop:12, paddingBottom:20 }}>
           <img
             src="https://media.base44.com/images/public/69c82e5c9cc68a413bb16ff9/ee1057a35_generated_image.png"
             alt="SplitMate"

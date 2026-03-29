@@ -119,7 +119,7 @@ export default function SettleUp({ onNavigate, onToast }) {
       <div style={{ position:'absolute', top:-60, left:'50%', transform:'translateX(-50%)', width:340, height:340, background:'radial-gradient(circle,rgba(34,212,122,0.10) 0%,transparent 65%)', borderRadius:'50%', pointerEvents:'none' }} />
 
       {/* Header */}
-      <div style={{ display:'flex', alignItems:'center', gap:12, padding:'20px 16px 20px', position:'relative', zIndex:1 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px 20px', position:'relative', zIndex:1 }}>
         <button onClick={() => onNavigate('group-detail')} style={{ width:36, height:36, borderRadius:12, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.06)', color:'#a0b0e0', fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>‹</button>
         <div>
           <h1 style={{ fontSize:20, fontWeight:900, color:'#fff', letterSpacing:-0.3 }}>Settle Up</h1>
