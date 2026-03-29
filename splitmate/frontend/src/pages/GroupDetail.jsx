@@ -8,12 +8,29 @@ const CATEGORY_EMOJI = {
 };
 
 export default function GroupDetail({ onNavigate, onToast }) {
-  const { activeGroup, expenses, balances, user, deleteExpense, paymentStatus } = useAppStore();
+  const { activeGroup, expenses, balances, user, deleteExpense, paymentStatus, deleteGroup } = useAppStore();
+  const isAdmin = activeGroup?.role === 'admin' || activeGroup?.created_by === user?.id?.toString();
   const [tab, setTab] = useState('expenses');
 
   if (!activeGroup) { onNavigate('groups'); return null; }
 
   const handleBack = () => onNavigate('groups');
+
+  const handleDeleteGroup = () => {
+    window.Telegram?.WebApp?.showConfirm(
+      `Delete "${activeGroup.name}"? All expenses will be permanently removed. This cannot be undone.`,
+      async (ok) => {
+        if (!ok) return;
+        try {
+          await deleteGroup(activeGroup.id);
+          onToast('Group deleted');
+          onNavigate('groups');
+        } catch (err) {
+          onToast(err.message || 'Failed to delete group', 'error');
+        }
+      }
+    );
+  };
 
   const handleDelete = async (expenseId) => {
     window.Telegram?.WebApp?.showConfirm('Delete this expense? This cannot be undone.', async (ok) => {
@@ -108,6 +125,18 @@ export default function GroupDetail({ onNavigate, onToast }) {
           }}
           title="Invite"
         >🔗</button>
+        {isAdmin && (
+          <button
+            onClick={handleDeleteGroup}
+            style={{
+              width:36, height:36, borderRadius:12,
+              border:'1px solid rgba(240,82,82,0.3)',
+              background:'rgba(240,82,82,0.08)', color:'#f05252', fontSize:16,
+              cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+            }}
+            title="Delete group"
+          >🗑</button>
+        )}
         <button
           onClick={handleExport}
           style={{

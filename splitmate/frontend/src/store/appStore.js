@@ -118,6 +118,14 @@ const useAppStore = create((set, get) => ({
     );
   },
 
+  deleteGroup: async (groupId) => {
+    await api.groups.delete(groupId);
+    set(state => ({
+      groups: state.groups.filter(g => g.id !== groupId),
+      activeGroup: state.activeGroup?.id === groupId ? null : state.activeGroup,
+    }));
+  },
+
   clearError: () => set({ error: null }),
   setDraftExpenseForm: (form) => set({ draftExpenseForm: form }),
   clearDraftExpenseForm: () => set({ draftExpenseForm: null }),

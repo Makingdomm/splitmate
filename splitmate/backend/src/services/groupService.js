@@ -92,3 +92,21 @@ export const isMember = async (groupId, telegramId) => {
     .maybeSingle();
   return !!data;
 };
+
+export const deleteGroup = async (groupId, telegramId) => {
+  // Only the group admin (creator) can delete
+  const { data: member } = await supabase
+    .from('group_members')
+    .select('role')
+    .eq('group_id', groupId)
+    .eq('user_id', telegramId)
+    .maybeSingle();
+  if (!member || member.role !== 'admin') throw Object.assign(new Error('Only the group admin can delete this group'), { code: 'FORBIDDEN' });
+
+  // Soft-delete: set is_active = false
+  const { error } = await supabase
+    .from('groups')
+    .update({ is_active: false })
+    .eq('id', groupId);
+  if (error) throw new Error(error.message);
+};

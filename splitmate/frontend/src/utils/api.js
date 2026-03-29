@@ -55,6 +55,7 @@ export const api = {
     balances: (id)         => request('GET',  `/api/groups/${id}/balances`),
     join:     (inviteCode) => request('POST', '/api/groups/join', { inviteCode }),
     preview:  (code)       => request('GET',  `/api/groups/invite/${code}`),
+    delete:   (id)         => request('DELETE', `/api/groups/${id}`),
   },
 
   // Expenses

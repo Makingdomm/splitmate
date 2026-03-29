@@ -4,7 +4,7 @@
 
 import {
   createGroup, getGroupById, getUserGroups,
-  getGroupMembers, getGroupByInviteCode, joinGroup, isMember
+  getGroupMembers, getGroupByInviteCode, joinGroup, isMember, deleteGroup
 } from '../services/groupService.js';
 import { isProUser, countUserGroups } from '../services/userService.js';
 import { getGroupBalances } from '../services/expenseService.js';
@@ -123,4 +123,16 @@ export default async function groupRoutes(fastify) {
       },
     };
   });
+
+  // ── DELETE /api/groups/:id — Delete group (admin only) ───────────────────
+  fastify.delete('/:id', async (req, reply) => {
+    try {
+      await deleteGroup(req.params.id, req.user.telegram_id);
+      return { success: true };
+    } catch (err) {
+      if (err.code === 'FORBIDDEN') return reply.code(403).send({ error: err.message });
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
 }
