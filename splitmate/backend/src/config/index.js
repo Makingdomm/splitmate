@@ -33,7 +33,9 @@ export const config = {
   OPENAI_API_KEY:         optional('OPENAI_API_KEY', ''),
   GEMINI_API_KEY:         optional('GEMINI_API_KEY', ''),
   EXCHANGE_RATES_API_KEY: optional('EXCHANGE_RATES_API_KEY', ''),
-  PRO_MONTHLY_STARS:      parseInt(optional('PRO_MONTHLY_STARS', '500'), 10),
+  PRO_MONTHLY_STARS:      parseInt(optional('PRO_MONTHLY_STARS', '99'), 10),
+  ELITE_MONTHLY_STARS:    parseInt(optional('ELITE_MONTHLY_STARS', '199'), 10),
+  FREE_GROUP_LIMIT:       parseInt(optional('FREE_GROUP_LIMIT', '2'), 10),
   TON_FEE_PERCENT:        parseFloat(optional('TON_FEE_PERCENT', '0.5')),
   APP_TON_WALLET:         optional('APP_TON_WALLET', ''),      // Your TON wallet for Pro payments
 };

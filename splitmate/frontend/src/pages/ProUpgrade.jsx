@@ -7,12 +7,12 @@ const TIERS = [
     key: 'standard',
     name: 'Standard',
     emoji: '💙',
-    starsPrice: 500,
+    starsPrice: 99,
     tonPrice: null, // fetched dynamically
     label: 'Most Popular',
     popular: true,
     features: [
-      'Unlimited expense groups',
+      'Up to 10 expense groups',
       'Multi-currency support',
       'Custom splits (%, exact)',
       'Automated debt reminders',
@@ -22,11 +22,11 @@ const TIERS = [
     key: 'elite',
     name: 'Elite',
     emoji: '⭐',
-    starsPrice: 1000,
+    starsPrice: 199,
     tonPrice: null,
     label: 'All Features',
     features: [
-      'Everything in Standard',
+      'Unlimited expense groups',
       'AI receipt scanning',
       'TON blockchain settlements',
       'Spending analytics & charts',
@@ -63,7 +63,7 @@ export default function ProUpgrade({ onToast, onNavigate }) {
   }, []);
 
   // Compute TON prices
-  const TON_PRICES = { standard: 2.5, elite: 5.0 }; // USD equivalent in TON
+  const TON_PRICES = { standard: 0.8, elite: 1.5 }; // USD equivalent in TON
   const tonPriceForTier = TON_PRICES[selected];
 
   // Clean up polling on unmount

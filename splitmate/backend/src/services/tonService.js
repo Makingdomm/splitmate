@@ -164,8 +164,8 @@ export async function verifyTonTransfer({
 
 // How much TON each Pro tier costs (configurable via env)
 export const TON_PRO_PRICES = {
-  standard: parseFloat(process.env.TON_PRICE_STANDARD || '1.5'),  // ~$3
-  elite:    parseFloat(process.env.TON_PRICE_ELITE    || '3.0'),  // ~$6
+  standard: parseFloat(process.env.TON_PRICE_STANDARD || '0.8'),  // ~$2
+  elite:    parseFloat(process.env.TON_PRICE_ELITE    || '1.5'),  // ~$4
 };
 
 // The app's TON receiving wallet (set this in Railway env vars)

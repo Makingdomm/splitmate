@@ -9,7 +9,7 @@ import {
 import { isProUser, countUserGroups } from '../services/userService.js';
 import { getGroupBalances } from '../services/expenseService.js';
 
-const FREE_TIER_GROUP_LIMIT = 3;
+const FREE_TIER_GROUP_LIMIT = 2;
 
 export default async function groupRoutes(fastify) {
 
