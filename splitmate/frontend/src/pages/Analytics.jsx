@@ -112,7 +112,7 @@ export default function Analytics({ onNavigate, onToast }) {
               className="tab-btn"
               onClick={() => setTab(key)}
               style={{
-                flex: 1, height: 36, borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                flex: 1, height: 36, borderRadius: 12, cursor: 'pointer', fontSize: 11, fontWeight: 700,
                 background: tab === key ? 'rgba(79,142,247,0.2)' : 'rgba(255,255,255,0.04)',
                 color: tab === key ? '#7ab4ff' : '#5060a0',
                 border: tab === key ? '1px solid rgba(79,142,247,0.4)' : '1px solid rgba(255,255,255,0.06)',
