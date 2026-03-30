@@ -1,6 +1,14 @@
 import React from 'react';
 import useAppStore from '../store/appStore.js';
 
+const GROUP_COLORS = [
+  { bg: '#f0f4ec', border: '#d4e0c8', text: '#4a5e38', dot: '#4a5e38' },
+  { bg: '#fdf4e8', border: '#f0d9b0', text: '#b8761a', dot: '#d4851a' },
+  { bg: '#eef1fb', border: '#d0d8f4', text: '#4a5ea8', dot: '#5a6ec8' },
+  { bg: '#fdeef0', border: '#f4d0d4', text: '#a83a44', dot: '#c04050' },
+  { bg: '#edf8f4', border: '#c8ecde', text: '#2a7a5a', dot: '#38986e' },
+];
+
 export default function GroupList({ onNavigate, onToast }) {
   const { groups, user, paymentStatus, setActiveGroup } = useAppStore();
 
@@ -9,238 +17,190 @@ export default function GroupList({ onNavigate, onToast }) {
     onNavigate('group-detail');
   };
 
-  const totalNet = groups.reduce((sum, g) => {
-    return sum + parseFloat(g.total_lent || 0) - parseFloat(g.total_owed || 0);
-  }, 0);
-
+  const totalNet = groups.reduce((s, g) =>
+    s + parseFloat(g.total_lent || 0) - parseFloat(g.total_owed || 0), 0);
   const isPositive = totalNet > 0.01;
   const isNegative = totalNet < -0.01;
-  const summaryText = isPositive
-    ? `You're owed $${totalNet.toFixed(2)}`
-    : isNegative
-    ? `You owe $${Math.abs(totalNet).toFixed(2)}`
-    : 'All settled up';
+  const isPro = paymentStatus?.isPro;
+  const tier = paymentStatus?.tier;
+
+  const totalLent = groups.reduce((s, g) => s + parseFloat(g.total_lent || 0), 0);
+  const totalOwed = groups.reduce((s, g) => s + parseFloat(g.total_owed || 0), 0);
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(180deg, #060818 0%, #0a0f2e 40%, #060818 100%)',
-      padding: '0 16px 120px',
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
-      <style>{`
-        @keyframes shine-btn {
-          0%   { left: -100%; }
-          28%  { left: 130%; }
-          100% { left: 130%; }
-        }
-        .group-row:active { transform: scale(0.985); }
-        .new-group-btn:active { transform: scale(0.97); }
-        .join-btn:active { transform: scale(0.97); }
-      `}</style>
-
-      {/* Ambient glows */}
-      <div style={{ position:'absolute', top:-80, left:'50%', transform:'translateX(-50%)', width:400, height:400, background:'radial-gradient(circle, rgba(59,110,246,0.14) 0%, transparent 65%)', borderRadius:'50%', pointerEvents:'none' }} />
-      <div style={{ position:'absolute', bottom:100, right:-60, width:280, height:280, background:'radial-gradient(circle, rgba(245,176,30,0.07) 0%, transparent 65%)', borderRadius:'50%', pointerEvents:'none' }} />
-
-      <div style={{ position:'relative', zIndex:1 }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
+      <div style={{ padding: '0 16px 24px' }}>
 
         {/* ── Header ── */}
-        <div style={{ display:'flex', alignItems:'center', gap:14, paddingTop:12, paddingBottom:20 }}>
-          <img
-            src="https://media.base44.com/images/public/69c82e5c9cc68a413bb16ff9/ee1057a35_generated_image.png"
-            alt="SplitMate"
-            style={{
-              width:48, height:48, borderRadius:16, flexShrink:0,
-              boxShadow:'0 4px 16px rgba(79,142,247,0.4)',
-              objectFit:'cover',
-            }}
-          />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 18, paddingBottom: 20 }}>
           <div>
-            <h1 style={{ fontSize:22, fontWeight:900, color:'#fff', letterSpacing:-0.3, marginBottom:2 }}>SplitMate</h1>
-            <p style={{ fontSize:13, color:'#6070a0', fontWeight:500 }}>
-              {user ? `Hey, ${user.first_name || user.username}! 👋` : 'Your expense groups'}
-              {paymentStatus?.isPro && (
-                <span style={{
-                  marginLeft:8, background:'linear-gradient(135deg,rgba(245,176,30,0.2),rgba(245,176,30,0.1))',
-                  border:'1px solid rgba(245,176,30,0.4)', color:'#f5c842',
-                  fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:20,
-                }}>⭐ Pro</span>
-              )}
-            </p>
+            <h1 style={{ fontSize: 26, fontWeight: 900, color: 'var(--text)', letterSpacing: -0.5, marginBottom: 2 }}>
+              Hi, {user?.first_name || user?.username || 'there'} 👋
+            </h1>
+            <p style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 500 }}>Welcome back!</p>
+          </div>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            {isPro && (
+              <span className={`badge ${tier === 'elite' ? 'badge-elite' : 'badge-pro'}`}>
+                {tier === 'elite' ? '💎 Elite' : '⭐ Pro'}
+              </span>
+            )}
+            <button className="btn-icon accent" onClick={() => onNavigate('wallet')} title="Wallet">💼</button>
           </div>
         </div>
 
-        {/* ── Balance Hero ── */}
-        <div style={{
-          borderRadius:20, padding:'20px 20px',
-          background: isPositive
-            ? 'linear-gradient(135deg, rgba(34,212,122,0.12) 0%, rgba(34,212,122,0.05) 100%)'
-            : isNegative
-            ? 'linear-gradient(135deg, rgba(240,82,82,0.12) 0%, rgba(240,82,82,0.05) 100%)'
-            : 'rgba(255,255,255,0.04)',
-          border: isPositive
-            ? '1px solid rgba(34,212,122,0.25)'
-            : isNegative
-            ? '1px solid rgba(240,82,82,0.25)'
-            : '1px solid rgba(255,255,255,0.07)',
-          marginBottom:24, position:'relative', overflow:'hidden',
-        }}>
-          <div style={{ position:'absolute', top:0, left:0, right:0, height:1, background: isPositive ? 'linear-gradient(90deg,transparent,rgba(34,212,122,0.4),transparent)' : isNegative ? 'linear-gradient(90deg,transparent,rgba(240,82,82,0.4),transparent)' : 'linear-gradient(90deg,transparent,rgba(79,142,247,0.3),transparent)' }} />
-          <div style={{ fontSize:11, fontWeight:700, color:'#4a5080', textTransform:'uppercase', letterSpacing:0.8, marginBottom:10 }}>Overall Balance</div>
-          <div style={{
-            fontSize:32, fontWeight:900, letterSpacing:-1, marginBottom:6,
-            color: isPositive ? '#22d47a' : isNegative ? '#f05252' : '#fff',
-          }}>
-            {totalNet === 0 ? '—' : (isPositive ? '+' : '') + '$' + Math.abs(totalNet).toFixed(2)}
+        {/* ── Balance Hero (Brand Card) ── */}
+        <div className="brand-card animate-in" style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
+            Total Balance
           </div>
-          <div style={{ fontSize:13, color: isPositive ? '#22d47a' : isNegative ? '#f05252' : '#4a5080', fontWeight:500 }}>
-            {isPositive ? '📈' : isNegative ? '📉' : '✓'} {summaryText}
+          <div style={{ fontSize: 42, fontWeight: 900, color: '#fff', letterSpacing: -2, lineHeight: 1, marginBottom: 10 }}>
+            {totalNet === 0 ? '$0.00' : `${isPositive ? '+' : '-'}$${Math.abs(totalNet).toFixed(2)}`}
+          </div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', fontWeight: 500, marginBottom: 20 }}>
+            {isPositive ? '📈 You\'re owed money' : isNegative ? '📉 You owe money' : '✓ All settled up'}
+          </div>
+
+          {/* Stats row */}
+          <div style={{ display: 'flex', gap: 0, background: 'rgba(255,255,255,0.12)', borderRadius: 16, overflow: 'hidden' }}>
+            <div style={{ flex: 1, padding: '12px 14px', borderRight: '1px solid rgba(255,255,255,0.12)' }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: '#fff', marginBottom: 2 }}>${totalLent.toFixed(0)}</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: 0.6 }}>Lent</div>
+            </div>
+            <div style={{ flex: 1, padding: '12px 14px', borderRight: '1px solid rgba(255,255,255,0.12)' }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: '#fff', marginBottom: 2 }}>${totalOwed.toFixed(0)}</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: 0.6 }}>Owed</div>
+            </div>
+            <div style={{ flex: 1, padding: '12px 14px' }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: '#fff', marginBottom: 2 }}>{groups.length}</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: 0.6 }}>Groups</div>
+            </div>
           </div>
         </div>
 
-        {/* ── Groups Section ── */}
+        {/* ── Action Buttons ── */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
+          <button
+            onClick={() => onNavigate('create-group')}
+            style={{
+              flex: 1, height: 52, borderRadius: 100,
+              background: 'var(--brand-grad)', border: 'none',
+              color: '#fff', fontSize: 14, fontWeight: 700,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font)',
+              transition: 'transform 0.12s',
+            }}
+          >
+            <span style={{ fontSize: 18 }}>＋</span> New Group
+          </button>
+          <button
+            onClick={() => onNavigate('join-group')}
+            className="btn-ghost"
+            style={{ flex: 1, height: 52, fontSize: 13 }}
+          >
+            🔗 Join Group
+          </button>
+        </div>
+
+        {/* ── Groups List ── */}
         {groups.length > 0 && (
-          <div style={{ fontSize:11, fontWeight:700, color:'#3d4870', textTransform:'uppercase', letterSpacing:0.8, marginBottom:12 }}>
-            Your Groups
-          </div>
+          <div className="section-label" style={{ paddingLeft: 2 }}>Your Groups</div>
         )}
 
         {groups.length === 0 ? (
-          <div style={{
-            textAlign:'center', padding:'48px 24px',
-            background:'rgba(255,255,255,0.03)',
-            border:'1px solid rgba(255,255,255,0.06)',
-            borderRadius:20, marginBottom:24,
-          }}>
-            <div style={{ fontSize:48, marginBottom:14 }}>👥</div>
-            <h3 style={{ fontSize:18, fontWeight:800, color:'#c8d0f0', marginBottom:8 }}>No groups yet</h3>
-            <p style={{ fontSize:14, color:'#4a5080', lineHeight:1.7 }}>
-              Create a group to start splitting expenses with friends or travel mates
-            </p>
+          <div className="card">
+            <div className="empty-state">
+              <div className="empty-icon">👥</div>
+              <div className="empty-title">No groups yet</div>
+              <div className="empty-desc">Create a group and start splitting expenses with friends instantly</div>
+            </div>
           </div>
         ) : (
-          <div style={{
-            background:'rgba(255,255,255,0.03)',
-            border:'1px solid rgba(255,255,255,0.06)',
-            borderRadius:20, padding:'4px 0', marginBottom:20,
-          }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {groups.map((group, i) => {
               const net = parseFloat(group.total_lent || 0) - parseFloat(group.total_owed || 0);
               const isOwed = net > 0.01;
               const isOwing = net < -0.01;
+              const colors = GROUP_COLORS[i % GROUP_COLORS.length];
+
               return (
                 <div
                   key={group.id}
-                  className="group-row"
+                  className="card card-hover"
                   onClick={() => handleGroupClick(group)}
-                  style={{
-                    display:'flex', alignItems:'center', gap:14, padding:'14px 16px',
-                    borderBottom: i < groups.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-                    cursor:'pointer', transition:'all 0.15s',
-                  }}
+                  style={{ padding: '16px 16px' }}
                 >
-                  {/* Avatar */}
-                  <div style={{
-                    width:44, height:44, borderRadius:14, flexShrink:0,
-                    background:'linear-gradient(135deg, rgba(79,142,247,0.3) 0%, rgba(106,94,247,0.3) 100%)',
-                    border:'1px solid rgba(79,142,247,0.25)',
-                    display:'flex', alignItems:'center', justifyContent:'center',
-                    fontSize:18, fontWeight:900, color:'#7ab4ff',
-                  }}>
-                    {group.name.charAt(0).toUpperCase()}
-                  </div>
-
-                  {/* Info */}
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:15, fontWeight:700, color:'#e8eeff', marginBottom:3, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                      {group.name}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+                    {/* Avatar */}
+                    <div style={{
+                      width: 50, height: 50, borderRadius: 16, flexShrink: 0,
+                      background: colors.bg,
+                      border: `1.5px solid ${colors.border}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 20, fontWeight: 900, color: colors.text,
+                    }}>
+                      {group.name.charAt(0).toUpperCase()}
                     </div>
-                    <div style={{ fontSize:12, color:'#4a5080', fontWeight:500 }}>
-                      {group.member_count} member{group.member_count !== 1 ? 's' : ''} · {group.currency}
+
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {group.name}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: colors.dot, display: 'inline-block', flexShrink: 0 }} />
+                        {group.member_count} member{group.member_count !== 1 ? 's' : ''} · {group.currency}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Balance */}
-                  <div style={{
-                    fontSize:14, fontWeight:800, flexShrink:0,
-                    color: isOwed ? '#22d47a' : isOwing ? '#f05252' : '#3d4870',
-                  }}>
-                    {Math.abs(net) < 0.01
-                      ? <span style={{ fontSize:18, color:'#22d47a' }}>✓</span>
-                      : <>{net > 0 ? '+' : ''}{net.toFixed(2)}</>
-                    }
-                  </div>
+                    {/* Balance */}
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      {Math.abs(net) < 0.01 ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span className="badge badge-green">Settled ✓</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ fontSize: 16, fontWeight: 900, color: isOwed ? 'var(--brand)' : 'var(--red)', letterSpacing: -0.3 }}>
+                            {net > 0 ? '+' : ''}${Math.abs(net).toFixed(2)}
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, marginTop: 1 }}>
+                            {isOwed ? 'owed to you' : 'you owe'}
+                          </div>
+                        </>
+                      )}
+                    </div>
 
-                  {/* Chevron */}
-                  <div style={{ color:'#2a3060', fontSize:16, flexShrink:0 }}>›</div>
+                    <div style={{ color: 'var(--text-4)', fontSize: 20, fontWeight: 300, flexShrink: 0 }}>›</div>
+                  </div>
                 </div>
               );
             })}
           </div>
         )}
 
-        {/* ── Action Buttons ── */}
-        <button
-          className="new-group-btn"
-          onClick={() => onNavigate('create-group')}
-          style={{
-            width:'100%', height:56, marginBottom:12,
-            background:'linear-gradient(135deg, #4f8ef7 0%, #6a5ef7 100%)',
-            border:'none', borderRadius:18,
-            fontSize:16, fontWeight:800, color:'#fff',
-            cursor:'pointer', letterSpacing:0.2,
-            boxShadow:'0 4px 20px rgba(79,142,247,0.4), inset 0 1px 0 rgba(255,255,255,0.15)',
-            position:'relative', overflow:'hidden',
-            transition:'transform 0.1s',
-          }}
-        >
-          <div style={{ position:'absolute', top:0, left:'-100%', width:'60%', height:'100%', background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent)', transform:'skewX(-20deg)', animation:'shine-btn 4s infinite' }} />
-          + New Group
-        </button>
-
-        <button
-          className="join-btn"
-          onClick={() => onNavigate('join-group')}
-          style={{
-            width:'100%', height:52,
-            background:'rgba(255,255,255,0.05)',
-            border:'1px solid rgba(255,255,255,0.10)',
-            borderRadius:18,
-            fontSize:15, fontWeight:700, color:'#7a8ab8',
-            cursor:'pointer', letterSpacing:0.1,
-            transition:'transform 0.1s',
-          }}
-        >
-          Join with Code
-        </button>
-
-        {/* ── Pro upsell banner ── */}
-        {!paymentStatus?.isPro && groups.length >= 1 && (
+        {/* ── Pro Upsell ── */}
+        {!isPro && groups.length >= 1 && (
           <div
             onClick={() => onNavigate('pro')}
+            className="card card-hover animate-in"
             style={{
-              marginTop:20, borderRadius:16, padding:'14px 18px',
-              background:'linear-gradient(135deg, rgba(245,176,30,0.12) 0%, rgba(245,176,30,0.05) 100%)',
-              border:'1px solid rgba(245,176,30,0.25)',
-              display:'flex', alignItems:'center', gap:12, cursor:'pointer',
+              marginTop: 16, padding: '16px 18px',
+              background: 'linear-gradient(135deg, rgba(184,150,26,0.08), rgba(184,150,26,0.04))',
+              border: '1.5px solid rgba(184,150,26,0.2)',
+              display: 'flex', alignItems: 'center', gap: 14,
+              boxShadow: 'none',
             }}
           >
-            <span style={{ fontSize:22 }}>⭐</span>
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:'#f5c842', marginBottom:2 }}>
-                {groups.length >= 2 ? '🔒 Free limit reached — Upgrade' : 'Upgrade to Pro'}
-              </div>
-              <div style={{ fontSize:12, color:'#7a6020' }}>
-                {groups.length >= 2
-                  ? 'Only 99 Stars/mo — cheaper than Splitwise ›'
-                  : 'Unlimited groups + AI receipt scanning ›'}
-              </div>
+            <div style={{ width: 46, height: 46, borderRadius: 15, background: 'rgba(184,150,26,0.12)', border: '1.5px solid rgba(184,150,26,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>⭐</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--gold)', marginBottom: 3 }}>Upgrade to Pro</div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>AI receipts · Analytics · More groups</div>
             </div>
-            <span style={{ color:'#7a6020', fontSize:18 }}>›</span>
+            <div style={{ color: 'var(--text-4)', fontSize: 20 }}>›</div>
           </div>
         )}
+
       </div>
     </div>
   );

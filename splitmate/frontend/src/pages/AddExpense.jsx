@@ -3,42 +3,36 @@ import useAppStore from '../store/appStore.js';
 import api from '../utils/api.js';
 
 const CATEGORIES = [
-  { value: 'food',          label: '🍕', name: 'Food' },
-  { value: 'transport',     label: '🚗', name: 'Transport' },
-  { value: 'accommodation', label: '🏨', name: 'Hotel' },
-  { value: 'entertainment', label: '🎬', name: 'Fun' },
-  { value: 'shopping',      label: '🛍️', name: 'Shop' },
-  { value: 'health',        label: '💊', name: 'Health' },
-  { value: 'utilities',     label: '💡', name: 'Bills' },
-  { value: 'general',       label: '💰', name: 'General' },
+  { value: 'food',          icon: '🍕', name: 'Food' },
+  { value: 'transport',     icon: '🚗', name: 'Transport' },
+  { value: 'accommodation', icon: '🏨', name: 'Hotel' },
+  { value: 'entertainment', icon: '🎬', name: 'Fun' },
+  { value: 'shopping',      icon: '🛍️', name: 'Shop' },
+  { value: 'health',        icon: '💊', name: 'Health' },
+  { value: 'utilities',     icon: '💡', name: 'Bills' },
+  { value: 'general',       icon: '💰', name: 'Other' },
 ];
 
-const inp = {
-  width: '100%', height: 50,
-  background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.10)',
-  borderRadius: 14, padding: '0 14px',
-  color: '#e8eeff', fontSize: 15, fontWeight: 500,
-  outline: 'none', boxSizing: 'border-box',
-};
+const SPLIT_TYPES = [
+  { value: 'equal',      label: '⚖️ Equal' },
+  { value: 'percentage', label: '% Percent' },
+  { value: 'custom',     label: '✏️ Exact' },
+  { value: 'shares',     label: '🔢 Shares' },
+];
 
 export default function AddExpense({ onNavigate, onToast }) {
   const { activeGroup, user, addExpense, paymentStatus, draftExpenseForm, setDraftExpenseForm, clearDraftExpenseForm } = useAppStore();
-  const [members, setMembers]       = useState([]);
+  const [members, setMembers] = useState([]);
   const [currencies, setCurrencies] = useState([]);
-  const [form, setForm] = useState(() => {
-    if (draftExpenseForm) return draftExpenseForm;
-    return {
-      description: '', amount: '',
-      currency: activeGroup?.currency || 'USD',
-      category: 'general', paidBy: user?.id?.toString() || '',
-      splitType: 'equal',
-      isRecurring: false, recurInterval: 'monthly',
-    };
+  const [form, setForm] = useState(() => draftExpenseForm || {
+    description: '', amount: '',
+    currency: activeGroup?.currency || 'USD',
+    category: 'general', paidBy: user?.id?.toString() || '',
+    splitType: 'equal', isRecurring: false, recurInterval: 'monthly',
   });
-  const [splitData, setSplitData]   = useState([]);
+  const [splitData, setSplitData] = useState([]);
   const [submitting, setSubmitting] = useState(false);
-  const [scanning, setScanning]     = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -46,13 +40,12 @@ export default function AddExpense({ onNavigate, onToast }) {
     if (!activeGroup) return;
     api.groups.get(activeGroup.id).then(({ members }) => {
       setMembers(members);
-      // Init split data for all members
       setSplitData(members.map(m => ({ userId: m.telegram_id.toString(), name: m.full_name, percentage: Math.floor(100 / members.length), shares: 1, amount: '' })));
     });
     api.payments.currencies().then(({ currencies }) => setCurrencies(currencies));
   }, [activeGroup]);
 
-  const set = (field, value) => setForm(p => ({ ...p, [field]: value }));
+  const set = (field, val) => setForm(p => ({ ...p, [field]: val }));
 
   const fileToBase64 = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -77,23 +70,21 @@ export default function AddExpense({ onNavigate, onToast }) {
         category: data.category || prev.category,
       }));
       setScanResult(data);
-      onToast(`✅ Receipt scanned — ${data.merchant || 'details filled in'}!`);
+      onToast(`✅ ${data.merchant || 'Receipt'} scanned!`);
     } catch (err) {
       if (err.code === 'PRO_REQUIRED') { setDraftExpenseForm(form); onNavigate('pro'); return; }
-      onToast(err.message || 'Could not read receipt. Try a clearer photo.', 'error');
+      onToast(err.message || 'Could not read receipt', 'error');
     } finally { setScanning(false); e.target.value = ''; }
   };
 
-  // Validate custom / percentage splits sum
   const validateSplits = () => {
     if (form.splitType === 'percentage') {
       const total = splitData.reduce((s, d) => s + (parseFloat(d.percentage) || 0), 0);
-      if (Math.abs(total - 100) > 0.5) { onToast(`Percentages must add up to 100% (currently ${total.toFixed(1)}%)`, 'error'); return false; }
+      if (Math.abs(total - 100) > 0.5) { onToast(`Percentages must add to 100% (now ${total.toFixed(1)}%)`, 'error'); return false; }
     }
     if (form.splitType === 'custom') {
       const total = splitData.reduce((s, d) => s + (parseFloat(d.amount) || 0), 0);
-      const expAmount = parseFloat(form.amount) || 0;
-      if (Math.abs(total - expAmount) > 0.01) { onToast(`Custom amounts must add up to ${expAmount} (currently ${total.toFixed(2)})`, 'error'); return false; }
+      if (Math.abs(total - (parseFloat(form.amount) || 0)) > 0.01) { onToast(`Custom amounts must add up to ${form.amount}`, 'error'); return false; }
     }
     return true;
   };
@@ -103,33 +94,31 @@ export default function AddExpense({ onNavigate, onToast }) {
     return splitData.map(d => ({
       userId: d.userId,
       ...(form.splitType === 'percentage' ? { percentage: parseFloat(d.percentage) || 0 } : {}),
-      ...(form.splitType === 'custom'     ? { amount: parseFloat(d.amount) || 0 } : {}),
-      ...(form.splitType === 'shares'     ? { shares: parseFloat(d.shares) || 1 } : {}),
+      ...(form.splitType === 'custom' ? { amount: parseFloat(d.amount) || 0 } : {}),
+      ...(form.splitType === 'shares' ? { shares: parseFloat(d.shares) || 1 } : {}),
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!form.description.trim() || !form.amount) { onToast('Fill in description and amount', 'error'); return; }
     if (isNaN(parseFloat(form.amount)) || parseFloat(form.amount) <= 0) { onToast('Amount must be positive', 'error'); return; }
     if (!validateSplits()) return;
-
     setSubmitting(true);
     try {
       await addExpense({
-        groupId:       activeGroup.id,
-        description:   form.description.trim(),
-        amount:        parseFloat(form.amount),
-        currency:      form.currency,
-        category:      form.category,
-        splitType:     form.splitType,
-        splitData:     buildSplitData(),
-        paidBy:        parseInt(form.paidBy, 10),
-        isRecurring:   form.isRecurring,
+        groupId: activeGroup.id,
+        description: form.description.trim(),
+        amount: parseFloat(form.amount),
+        currency: form.currency,
+        category: form.category,
+        splitType: form.splitType,
+        splitData: buildSplitData(),
+        paidBy: parseInt(form.paidBy, 10),
+        isRecurring: form.isRecurring,
         recurInterval: form.recurInterval,
       });
       clearDraftExpenseForm();
-      onToast(form.isRecurring ? `Expense added! 🔄 Repeats ${form.recurInterval}` : 'Expense added! 💸');
+      onToast(form.isRecurring ? 'Recurring expense added! 🔄' : 'Expense added! 💸');
       onNavigate('group-detail');
     } catch (err) {
       err.code === 'PRO_REQUIRED' ? (setDraftExpenseForm(form), onNavigate('pro')) : onToast(err.message, 'error');
@@ -137,200 +126,194 @@ export default function AddExpense({ onNavigate, onToast }) {
   };
 
   if (!activeGroup) { onNavigate('groups'); return null; }
-
   const isPro = paymentStatus?.isPro;
-  const SPLIT_TYPES = [
-    { value: 'equal',      label: '⚖️ Equal' },
-    { value: 'percentage', label: '% Split' },
-    { value: 'custom',     label: '✏️ Exact' },
-    { value: 'shares',     label: '🔢 Shares' },
-  ];
 
   return (
-    <div style={{ minHeight:'100vh', background:'linear-gradient(180deg,#060818 0%,#0a0f2e 40%,#060818 100%)', paddingBottom:40, position:'relative', overflow:'hidden' }}>
-      <style>{`
-        .form-inp:focus{border-color:rgba(79,142,247,0.5)!important;background:rgba(79,142,247,0.08)!important;}
-        .cat-btn:active{transform:scale(0.93);}
-        .split-opt:active{transform:scale(0.96);}
-        .scan-btn:active{transform:scale(0.97);}
-        .recur-toggle:active{transform:scale(0.97);}
-      `}</style>
-      <div style={{ position:'absolute', top:-60, left:'50%', transform:'translateX(-50%)', width:340, height:340, background:'radial-gradient(circle,rgba(59,110,246,0.13) 0%,transparent 65%)', borderRadius:'50%', pointerEvents:'none' }} />
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: 40 }}>
+      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleScanReceipt} />
 
-      {/* Header */}
-      <div style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px 20px', position:'relative', zIndex:1 }}>
-        <button onClick={() => { clearDraftExpenseForm(); onNavigate('group-detail'); }} style={{ width:36, height:36, borderRadius:12, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.06)', color:'#a0b0e0', fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>‹</button>
-        <div style={{ flex:1 }}>
-          <h1 style={{ fontSize:20, fontWeight:900, color:'#fff', letterSpacing:-0.3 }}>Add Expense</h1>
-          <p style={{ fontSize:12, color:'#4a5080' }}>{activeGroup.name}</p>
+      {/* ── Header ── */}
+      <div className="page-header">
+        <button className="btn-icon" onClick={() => onNavigate('group-detail')} style={{ fontSize: 22 }}>‹</button>
+        <div style={{ flex: 1 }}>
+          <div className="page-header-title">Add Expense</div>
+          <div className="page-header-sub">{activeGroup.name}</div>
         </div>
-        <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display:'none' }} onChange={handleScanReceipt} />
-        <button type="button" className="scan-btn" onClick={() => fileInputRef.current?.click()} disabled={scanning}
-          style={{ height:36, padding:'0 14px', borderRadius:12, border:'1px solid rgba(245,176,30,0.3)', background: scanning ? 'rgba(245,176,30,0.05)' : 'rgba(245,176,30,0.1)', color: scanning ? '#7a6020' : '#f5b01e', fontSize:12, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:6, transition:'all 0.2s' }}>
-          {scanning ? '⏳' : '📷'} {scanning ? 'Scanning…' : 'Scan'}{!isPro && ' ⭐'}
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={scanning}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            height: 38, padding: '0 14px',
+            background: isPro ? 'var(--brand-light)' : 'var(--surface)',
+            border: `1.5px solid ${isPro ? 'var(--brand-mid)' : 'var(--border)'}`,
+            borderRadius: 100, cursor: 'pointer',
+            fontSize: 12, fontWeight: 800,
+            color: isPro ? 'var(--brand)' : 'var(--text-3)',
+            fontFamily: 'var(--font)',
+            boxShadow: 'var(--shadow-sm)',
+            transition: 'all 0.12s',
+          }}
+        >
+          {scanning ? <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> : '✨'}
+          {scanning ? 'Scanning…' : 'Scan Receipt'}
+          {!isPro && <span style={{ fontSize: 9, color: 'var(--gold)', fontWeight: 800, marginLeft: 2 }}>PRO</span>}
         </button>
       </div>
 
-      {scanResult && (
-        <div style={{ margin:'0 16px 16px', padding:'12px 16px', borderRadius:14, background:'rgba(34,197,94,0.08)', border:'1px solid rgba(34,197,94,0.2)', position:'relative', zIndex:1 }}>
-          <div style={{ fontSize:12, fontWeight:700, color:'#22c55e', marginBottom:6 }}>✅ Receipt scanned</div>
-          {scanResult.items?.slice(0,3).map((item, i) => (
-            <div key={i} style={{ fontSize:12, color:'#4a7060' }}>{item.name} — {scanResult.currency} {item.amount}</div>
-          ))}
-        </div>
-      )}
+      <div style={{ padding: '20px 16px 0' }}>
 
-      <form onSubmit={handleSubmit} style={{ padding:'0 16px', position:'relative', zIndex:1 }}>
-
-        {/* Description */}
-        <div style={{ marginBottom:16 }}>
-          <label style={{ fontSize:11, fontWeight:700, color:'#3d4870', textTransform:'uppercase', letterSpacing:0.8, display:'block', marginBottom:8 }}>What was it for?</label>
-          <input className="form-inp" style={inp} type="text" placeholder="e.g. Dinner, Uber, Hotel…" value={form.description} onChange={e => set('description', e.target.value)} maxLength={200} />
-        </div>
-
-        {/* Amount + Currency */}
-        <div style={{ display:'flex', gap:10, marginBottom:16 }}>
-          <div style={{ flex:2 }}>
-            <label style={{ fontSize:11, fontWeight:700, color:'#3d4870', textTransform:'uppercase', letterSpacing:0.8, display:'block', marginBottom:8 }}>Amount</label>
-            <input className="form-inp" style={inp} type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="0.00" value={form.amount} onChange={e => set('amount', e.target.value)} />
+        {/* Scan Result Banner */}
+        {scanResult && (
+          <div className="animate-in" style={{ background: 'var(--green-dim)', border: '1.5px solid rgba(74,94,56,0.25)', borderRadius: 'var(--r-lg)', padding: '12px 16px', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 20 }}>✅</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--brand)', marginBottom: 2 }}>Receipt scanned!</div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{scanResult.merchant} · {scanResult.currency} {scanResult.total}</div>
+            </div>
+            <button onClick={() => setScanResult(null)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 14, cursor: 'pointer' }}>✕</button>
           </div>
-          <div style={{ flex:1 }}>
-            <label style={{ fontSize:11, fontWeight:700, color:'#3d4870', textTransform:'uppercase', letterSpacing:0.8, display:'block', marginBottom:8 }}>Currency</label>
-            <select className="form-inp" style={{ ...inp, padding:'0 10px', appearance:'none' }} value={form.currency} onChange={e => set('currency', e.target.value)}>
-              {currencies.map(c => <option key={c.code} value={c.code} style={{ background:'#0a0f2e' }}>{c.code}</option>)}
+        )}
+
+        {/* ── Amount ── */}
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 }}>Amount</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+            <select
+              value={form.currency}
+              onChange={e => set('currency', e.target.value)}
+              style={{ height: 72, padding: '0 12px', borderRadius: 'var(--r-lg)', border: '1.5px solid var(--brand-mid)', background: 'var(--brand-light)', color: 'var(--brand)', fontSize: 14, fontWeight: 800, fontFamily: 'var(--font)', outline: 'none', cursor: 'pointer', flexShrink: 0, boxShadow: 'var(--shadow-sm)' }}
+            >
+              {currencies.length > 0
+                ? currencies.map(c => <option key={c.code} value={c.code}>{c.code}</option>)
+                : ['USD','EUR','GBP','JPY','CAD','AUD'].map(c => <option key={c} value={c}>{c}</option>)
+              }
             </select>
+            <input
+              className="field-input amount"
+              type="number" inputMode="decimal" step="0.01" min="0"
+              placeholder="0.00"
+              value={form.amount}
+              onChange={e => set('amount', e.target.value)}
+              style={{ flex: 1, maxWidth: 200 }}
+            />
           </div>
         </div>
 
-        {/* Category */}
-        <div style={{ marginBottom:16 }}>
-          <label style={{ fontSize:11, fontWeight:700, color:'#3d4870', textTransform:'uppercase', letterSpacing:0.8, display:'block', marginBottom:10 }}>Category</label>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
-            {CATEGORIES.map(cat => {
-              const active = form.category === cat.value;
-              return (
-                <button key={cat.value} type="button" className="cat-btn"
-                  onClick={() => set('category', cat.value)}
-                  style={{ padding:'10px 4px', borderRadius:12, border: active ? '1px solid rgba(79,142,247,0.5)' : '1px solid rgba(255,255,255,0.07)', background: active ? 'rgba(79,142,247,0.15)' : 'rgba(255,255,255,0.03)', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4, transition:'all 0.15s' }}>
-                  <span style={{ fontSize:20 }}>{cat.label}</span>
-                  <span style={{ fontSize:10, color: active ? '#7ab4ff' : '#4a5080', fontWeight:600 }}>{cat.name}</span>
-                </button>
-              );
-            })}
+        {/* ── Description ── */}
+        <div style={{ marginBottom: 16 }}>
+          <label className="field-label">What was it for?</label>
+          <input
+            className="field-input"
+            type="text" placeholder="e.g. Dinner at Mario's…"
+            value={form.description}
+            onChange={e => set('description', e.target.value)}
+            maxLength={200}
+          />
+        </div>
+
+        {/* ── Category ── */}
+        <div style={{ marginBottom: 18 }}>
+          <div className="field-label">Category</div>
+          <div className="chip-row">
+            {CATEGORIES.map(cat => (
+              <button key={cat.value} className={`chip ${form.category === cat.value ? 'active' : ''}`} onClick={() => set('category', cat.value)}>
+                <span className="chip-icon">{cat.icon}</span>
+                {cat.name}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Paid By */}
-        <div style={{ marginBottom:16 }}>
-          <label style={{ fontSize:11, fontWeight:700, color:'#3d4870', textTransform:'uppercase', letterSpacing:0.8, display:'block', marginBottom:8 }}>Paid by</label>
-          <select className="form-inp" style={{ ...inp, padding:'0 14px', appearance:'none' }} value={form.paidBy} onChange={e => set('paidBy', e.target.value)}>
-            {members.map(m => <option key={m.telegram_id} value={m.telegram_id.toString()} style={{ background:'#0a0f2e' }}>{m.full_name}{Number(m.telegram_id) === Number(user?.id) ? ' (you)' : ''}</option>)}
+        {/* ── Paid By ── */}
+        <div style={{ marginBottom: 16 }}>
+          <label className="field-label">Paid by</label>
+          <select className="field-select" value={form.paidBy} onChange={e => set('paidBy', e.target.value)}>
+            {members.map(m => (
+              <option key={m.telegram_id} value={m.telegram_id.toString()}>
+                {m.full_name}{Number(m.telegram_id) === Number(user?.id) ? ' (you)' : ''}
+              </option>
+            ))}
           </select>
         </div>
 
-        {/* Split Type */}
-        <div style={{ marginBottom: form.splitType !== 'equal' ? 16 : 20 }}>
-          <label style={{ fontSize:11, fontWeight:700, color:'#3d4870', textTransform:'uppercase', letterSpacing:0.8, display:'block', marginBottom:10 }}>
-            Split Method {!isPro && <span style={{ color:'#f5b01e' }}>⭐ Pro for custom splits</span>}
-          </label>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
-            {SPLIT_TYPES.map(st => {
-              const active = form.splitType === st.value;
-              const needsPro = st.value !== 'equal' && !isPro;
-              return (
-                <button key={st.value} type="button" className="split-opt"
-                  onClick={() => { if (needsPro) { setDraftExpenseForm(form); onNavigate('pro'); return; } set('splitType', st.value); }}
-                  style={{ padding:'10px 4px', borderRadius:12, border: active ? '1px solid rgba(79,142,247,0.5)' : '1px solid rgba(255,255,255,0.07)', background: active ? 'rgba(79,142,247,0.15)' : 'rgba(255,255,255,0.03)', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4, transition:'all 0.15s', opacity: needsPro ? 0.6 : 1 }}>
-                  <span style={{ fontSize:11, color: active ? '#7ab4ff' : '#5060a0', fontWeight:700 }}>{st.label}</span>
-                  {needsPro && <span style={{ fontSize:9, color:'#f5b01e' }}>PRO</span>}
-                </button>
-              );
-            })}
+        {/* ── Split Type ── */}
+        <div style={{ marginBottom: 18 }}>
+          <div className="field-label">Split method</div>
+          <div className="tabs">
+            {SPLIT_TYPES.map(st => (
+              <button key={st.value} className={`tab ${form.splitType === st.value ? 'active' : ''}`} onClick={() => set('splitType', st.value)} style={{ fontSize: 11 }}>
+                {st.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Custom split inputs */}
-        {form.splitType !== 'equal' && members.length > 0 && (
-          <div style={{ marginBottom:20, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:14, padding:'12px 14px' }}>
-            <div style={{ fontSize:12, color:'#4a5080', marginBottom:12, fontWeight:600 }}>
-              {form.splitType === 'percentage' && '% per person (must total 100)'}
-              {form.splitType === 'custom'     && 'Exact amount per person'}
-              {form.splitType === 'shares'     && 'Shares per person (proportional)'}
-            </div>
+        {/* ── Custom Split ── */}
+        {form.splitType !== 'equal' && (
+          <div className="card animate-in" style={{ marginBottom: 18, overflow: 'hidden' }}>
             {splitData.map((d, i) => (
-              <div key={d.userId} style={{ display:'flex', alignItems:'center', gap:10, marginBottom: i < splitData.length-1 ? 10 : 0 }}>
-                <span style={{ flex:1, fontSize:13, color:'#a0b0d0', fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.name}</span>
+              <div key={d.userId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderBottom: i < splitData.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                <div className="avatar avatar-sm">{d.name.charAt(0).toUpperCase()}</div>
+                <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{d.name}</div>
                 {form.splitType === 'percentage' && (
-                  <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-                    <input type="number" min="0" max="100" step="1"
-                      value={d.percentage}
-                      onChange={e => setSplitData(prev => prev.map((p, j) => j === i ? { ...p, percentage: e.target.value } : p))}
-                      style={{ ...inp, width:70, height:38, fontSize:14, textAlign:'right', padding:'0 8px' }} />
-                    <span style={{ color:'#4a5080', fontSize:14 }}>%</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <input type="number" min="0" max="100" value={d.percentage}
+                      onChange={e => { const nd = [...splitData]; nd[i].percentage = e.target.value; setSplitData(nd); }}
+                      style={{ width: 64, height: 36, borderRadius: 100, border: '1.5px solid var(--border-med)', background: 'var(--surface)', color: 'var(--text)', fontSize: 14, fontWeight: 800, textAlign: 'center', outline: 'none', fontFamily: 'var(--font)' }}
+                    />
+                    <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 600 }}>%</span>
                   </div>
                 )}
                 {form.splitType === 'custom' && (
-                  <input type="number" min="0" step="0.01"
-                    placeholder="0.00"
-                    value={d.amount}
-                    onChange={e => setSplitData(prev => prev.map((p, j) => j === i ? { ...p, amount: e.target.value } : p))}
-                    style={{ ...inp, width:90, height:38, fontSize:14, textAlign:'right', padding:'0 8px' }} />
+                  <input type="number" min="0" step="0.01" placeholder="0.00" value={d.amount}
+                    onChange={e => { const nd = [...splitData]; nd[i].amount = e.target.value; setSplitData(nd); }}
+                    style={{ width: 88, height: 36, borderRadius: 100, border: '1.5px solid var(--border-med)', background: 'var(--surface)', color: 'var(--text)', fontSize: 14, fontWeight: 800, textAlign: 'center', outline: 'none', fontFamily: 'var(--font)' }}
+                  />
                 )}
                 {form.splitType === 'shares' && (
-                  <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-                    <button type="button" onClick={() => setSplitData(prev => prev.map((p, j) => j === i ? { ...p, shares: Math.max(1, (parseFloat(p.shares)||1) - 1) } : p))} style={{ width:28, height:28, borderRadius:8, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.06)', color:'#a0b0e0', fontSize:16, cursor:'pointer' }}>−</button>
-                    <span style={{ width:28, textAlign:'center', color:'#e8eeff', fontSize:14, fontWeight:700 }}>{d.shares}</span>
-                    <button type="button" onClick={() => setSplitData(prev => prev.map((p, j) => j === i ? { ...p, shares: (parseFloat(p.shares)||1) + 1 } : p))} style={{ width:28, height:28, borderRadius:8, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.06)', color:'#a0b0e0', fontSize:16, cursor:'pointer' }}>+</button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <input type="number" min="0.5" step="0.5" value={d.shares}
+                      onChange={e => { const nd = [...splitData]; nd[i].shares = e.target.value; setSplitData(nd); }}
+                      style={{ width: 64, height: 36, borderRadius: 100, border: '1.5px solid var(--border-med)', background: 'var(--surface)', color: 'var(--text)', fontSize: 14, fontWeight: 800, textAlign: 'center', outline: 'none', fontFamily: 'var(--font)' }}
+                    />
+                    <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 600 }}>×</span>
                   </div>
                 )}
               </div>
             ))}
-            {/* Totals hint */}
-            {form.splitType === 'percentage' && (
-              <div style={{ marginTop:10, fontSize:11, color: Math.abs(splitData.reduce((s,d)=>s+(parseFloat(d.percentage)||0),0)-100) < 0.5 ? '#22c55e' : '#f05252', fontWeight:600 }}>
-                Total: {splitData.reduce((s,d)=>s+(parseFloat(d.percentage)||0),0).toFixed(0)}% / 100%
-              </div>
-            )}
-            {form.splitType === 'custom' && (
-              <div style={{ marginTop:10, fontSize:11, color: Math.abs(splitData.reduce((s,d)=>s+(parseFloat(d.amount)||0),0) - (parseFloat(form.amount)||0)) < 0.01 ? '#22c55e' : '#f05252', fontWeight:600 }}>
-                Total: {splitData.reduce((s,d)=>s+(parseFloat(d.amount)||0),0).toFixed(2)} / {parseFloat(form.amount||0).toFixed(2)}
-              </div>
-            )}
           </div>
         )}
 
-        {/* Recurring toggle */}
-        <div style={{ marginBottom:20, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:14, padding:'14px 16px' }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-            <div>
-              <div style={{ fontSize:14, fontWeight:700, color:'#c8d0f0' }}>🔄 Recurring expense</div>
-              <div style={{ fontSize:11, color:'#4a5080', marginTop:2 }}>Auto-repeats on schedule {!isPro && '• ⭐ Pro'}</div>
-            </div>
-            <button type="button" className="recur-toggle"
-              onClick={() => { if (!isPro) { setDraftExpenseForm(form); onNavigate('pro'); return; } set('isRecurring', !form.isRecurring); }}
-              style={{ width:48, height:26, borderRadius:13, border:'none', cursor:'pointer', position:'relative', background: form.isRecurring ? 'linear-gradient(135deg,#4f8ef7,#6a5ef7)' : 'rgba(255,255,255,0.1)', transition:'all 0.2s' }}>
-              <div style={{ position:'absolute', top:3, left: form.isRecurring ? 24 : 3, width:20, height:20, borderRadius:10, background:'#fff', transition:'left 0.2s' }} />
-            </button>
+        {/* ── Recurring ── */}
+        <div className="toggle-row" style={{ marginBottom: form.isRecurring ? 12 : 24 }}>
+          <div>
+            <div className="toggle-label">🔄 Recurring expense</div>
+            <div className="toggle-desc">Auto-adds on a schedule</div>
           </div>
-          {form.isRecurring && (
-            <div style={{ marginTop:14, display:'flex', gap:10 }}>
-              {['weekly','monthly'].map(interval => (
-                <button key={interval} type="button"
-                  onClick={() => set('recurInterval', interval)}
-                  style={{ flex:1, height:38, borderRadius:10, border: form.recurInterval === interval ? '1px solid rgba(79,142,247,0.5)' : '1px solid rgba(255,255,255,0.07)', background: form.recurInterval === interval ? 'rgba(79,142,247,0.15)' : 'rgba(255,255,255,0.03)', color: form.recurInterval === interval ? '#7ab4ff' : '#4a5080', fontSize:13, fontWeight:700, cursor:'pointer', transition:'all 0.15s', textTransform:'capitalize' }}>
-                  {interval === 'weekly' ? '📅 Weekly' : '📆 Monthly'}
-                </button>
-              ))}
-            </div>
-          )}
+          <label className="switch">
+            <input type="checkbox" checked={form.isRecurring} onChange={e => set('isRecurring', e.target.checked)} />
+            <span className="switch-track" />
+          </label>
         </div>
 
-        {/* Submit */}
-        <button type="submit" disabled={submitting}
-          style={{ width:'100%', height:56, borderRadius:18, border:'none', background: submitting ? 'rgba(79,142,247,0.4)' : 'linear-gradient(135deg,#4f8ef7 0%,#6a5ef7 100%)', color:'#fff', fontSize:17, fontWeight:800, cursor: submitting ? 'not-allowed' : 'pointer', boxShadow:'0 4px 20px rgba(79,142,247,0.4)', letterSpacing:0.2, transition:'all 0.2s' }}>
-          {submitting ? '⏳ Adding…' : `💸 Add Expense`}
+        {form.isRecurring && (
+          <div style={{ marginBottom: 24 }}>
+            <label className="field-label">Repeat interval</label>
+            <select className="field-select" value={form.recurInterval} onChange={e => set('recurInterval', e.target.value)}>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+          </div>
+        )}
+
+        {/* ── Submit ── */}
+        <button className="btn-brand" onClick={handleSubmit} disabled={submitting || !form.amount || !form.description.trim()}>
+          {submitting ? <span className="spinner" style={{ width: 20, height: 20, borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }} /> : '💸'}
+          {submitting ? 'Adding…' : 'Add Expense'}
         </button>
-      </form>
+      </div>
     </div>
   );
 }
