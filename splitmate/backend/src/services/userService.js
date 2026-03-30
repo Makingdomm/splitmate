@@ -74,3 +74,54 @@ export const isProUser = async (telegramId) => {
   if (user.pro_expires_at && new Date(user.pro_expires_at) < new Date()) return false;
   return true;
 };
+
+// ── Wallet management ──────────────────────────────────────────────────────
+
+export const SUPPORTED_CHAINS = [
+  { id: 'TON',     label: 'TON Wallet',  chain: 'TON Blockchain', icon: 'TON' },
+  { id: 'BTC',     label: 'Bitcoin',     chain: 'Bitcoin',        icon: 'BTC' },
+  { id: 'ETH',     label: 'Ethereum',    chain: 'ERC-20',         icon: 'ETH' },
+  { id: 'SOL',     label: 'Solana',      chain: 'Solana',         icon: 'SOL' },
+  { id: 'BNB',     label: 'BNB Chain',   chain: 'BEP-20',         icon: 'BNB' },
+  { id: 'USDT_TRC',label: 'USDT',        chain: 'TRC-20',         icon: 'USDT' },
+  { id: 'USDT_ERC',label: 'USDT',        chain: 'ERC-20',         icon: 'USDT' },
+  { id: 'MATIC',   label: 'Polygon',     chain: 'Polygon',        icon: 'MATIC' },
+  { id: 'AVAX',    label: 'Avalanche',   chain: 'C-Chain',        icon: 'AVAX' },
+  { id: 'ADA',     label: 'Cardano',     chain: 'Cardano',        icon: 'ADA' },
+  { id: 'DOT',     label: 'Polkadot',    chain: 'Polkadot',       icon: 'DOT' },
+  { id: 'XRP',     label: 'XRP',         chain: 'XRP Ledger',     icon: 'XRP' },
+  { id: 'LTC',     label: 'Litecoin',    chain: 'Litecoin',       icon: 'LTC' },
+  { id: 'DOGE',    label: 'Dogecoin',    chain: 'Dogecoin',       icon: 'DOGE' },
+  { id: 'TRX',     label: 'TRON',        chain: 'TRON',           icon: 'TRX' },
+];
+
+export const getUserWallets = async (telegramId) => {
+  const { data, error } = await supabase
+    .from('user_wallets')
+    .select('*')
+    .eq('telegram_id', telegramId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return data || [];
+};
+
+export const saveUserWallets = async (telegramId, wallets) => {
+  // Delete existing and re-insert (simple upsert approach)
+  await supabase.from('user_wallets').delete().eq('telegram_id', telegramId);
+
+  if (!wallets || wallets.length === 0) return [];
+
+  const rows = wallets.map(w => ({
+    telegram_id: telegramId,
+    chain: w.chain || w.id,
+    address: w.address,
+    label: w.label || w.chain || w.id,
+  }));
+
+  const { data, error } = await supabase
+    .from('user_wallets')
+    .insert(rows)
+    .select();
+  if (error) throw new Error(error.message);
+  return data;
+};
