@@ -104,15 +104,15 @@ export default function GroupList({ onNavigate, onToast }) {
           {/* Quick Actions — spec §3.2 */}
           <div className="quick-actions">
             <button className="qa-btn settle" onClick={() => onNavigate('create-group')}>
-              <span className="qa-icon">＋</span>
+              <span className="qa-icon"><NewGroupIcon /></span>
               New Group
             </button>
             <button className="qa-btn request" onClick={() => onNavigate('join-group')}>
-              <span className="qa-icon">🔗</span>
+              <span className="qa-icon"><JoinGroupIcon /></span>
               Join Group
             </button>
-            <button className="qa-btn more" onClick={() => onNavigate('wallet')}>
-              <span className="qa-icon">•••</span>
+            <button className="qa-btn more" onClick={() => onNavigate('wallet-settings')}>
+              <span className="qa-icon"><MoreIcon /></span>
               More
             </button>
           </div>

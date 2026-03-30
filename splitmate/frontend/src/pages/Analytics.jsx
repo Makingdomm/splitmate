@@ -1,10 +1,10 @@
 // Analytics.jsx — spec §3.3 — light theme, military green
 import React, { useState, useEffect } from 'react';
+import { CatIcons } from '../components/Icons.jsx';
 import useAppStore from '../store/appStore.js';
 import api from '../utils/api.js';
 
 const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const CAT_ICONS  = { food:'🍕', transport:'🚗', accommodation:'🏨', entertainment:'🎬', shopping:'🛍️', health:'💊', utilities:'💡', other:'💰', general:'💰' };
 // spec §2.4 category dots — #4B5320, #DC3545, #FFC107, etc.
 const CAT_COLORS = { food:'#4B5320', transport:'#6B7B3A', accommodation:'#8F974B', entertainment:'#DC3545', shopping:'#FFC107', health:'#28A745', utilities:'#3A4219', other:'#CCCCCC', general:'#CCCCCC' };
 
@@ -237,7 +237,7 @@ export default function Analytics({ onNavigate, onToast }) {
                   <div className="cat-dot" style={{ background: CAT_COLORS[cat.name] || '#CCCCCC' }} />
                   {/* Category name — Body Large 16px regular #333 */}
                   <div style={{ flex:1, fontSize:16, color:'#333', lineHeight:'24px' }}>
-                    {CAT_ICONS[cat.name] || '💰'} {cat.name.charAt(0).toUpperCase()+cat.name.slice(1)}
+                    {(() => { const I = CatIcons[cat.name]||CatIcons.other; return <span style={{display:'inline-flex',verticalAlign:'middle',marginRight:6}}><I /></span>; })()} {cat.name.charAt(0).toUpperCase()+cat.name.slice(1)}
                   </div>
                   {/* Amount — Body Large 16px regular #333 */}
                   <div style={{ fontSize:16, color:'#333', lineHeight:'24px', fontWeight:500 }}>
@@ -255,7 +255,7 @@ export default function Analytics({ onNavigate, onToast }) {
                   {data.top5.map((e,i) => (
                     <div key={i} style={{ display:'flex', alignItems:'center', gap:16, padding:'16px 24px', borderBottom: i < data.top5.length-1 ? '1px solid #F5F5F5':'none' }}>
                       <div className="avatar" style={{ borderRadius:'50%', background:'#F5F5F5', fontSize:18 }}>
-                        {CAT_ICONS[e.category]||'💰'}
+                        {(() => { const I = CatIcons[e.category]||CatIcons.other; return <I />; })()}
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontSize:16, color:'#333', fontWeight:500, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{e.description}</div>

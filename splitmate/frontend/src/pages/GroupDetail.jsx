@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import useAppStore from '../store/appStore.js';
 import api from '../utils/api.js';
+import { CatIcons, AddExpenseIcon, SettleUpIcon, AnalyticsActive, SettingsIcon } from '../components/Icons.jsx';
 
-const CATEGORY_EMOJI = {
-  food: '🍕', transport: '🚗', accommodation: '🏨',
-  entertainment: '🎬', shopping: '🛍️', health: '💊',
-  utilities: '💡', general: '💰',
+// Use SVG icon components for categories
+const getCatIcon = (cat) => {
+  const Ico = CatIcons[cat] || CatIcons.other;
+  return Ico;
 };
 
 const CAT_COLORS = {
@@ -144,10 +145,18 @@ export default function GroupDetail({ onNavigate, onToast }) {
           <div className="page-header-sub">{activeGroup.member_count} members · {activeGroup.currency}</div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button className="btn-icon" onClick={handleShare} style={{ fontSize: 16, background: '#F5F5F5' }}>🔗</button>
-          <button className="btn-icon" onClick={() => onNavigate('analytics')} style={{ fontSize: 15, background: '#F5F5F5' }}>📊</button>
-          <button className="btn-icon" onClick={handleExport} style={{ fontSize: 14, background: '#F5F5F5' }}>📥</button>
-          {isAdmin && <button className="btn-icon" onClick={handleDeleteGroup} style={{ fontSize: 14, background: 'rgba(220,53,69,0.08)', color: '#DC3545' }}>🗑</button>}
+          <button className="btn-icon" onClick={handleShare} style={{ background: '#F5F5F5', color: '#4B5320' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07L9.5 11.07"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07L14.5 12.93"/></svg>
+          </button>
+          <button className="btn-icon" onClick={() => onNavigate('analytics')} style={{ background: '#F5F5F5', color: '#4B5320' }}>
+            <AnalyticsActive />
+          </button>
+          <button className="btn-icon" onClick={handleExport} style={{ background: '#F5F5F5', color: '#4B5320' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </button>
+          {isAdmin && <button className="btn-icon" onClick={handleDeleteGroup} style={{ background: 'rgba(220,53,69,0.08)', color: '#DC3545' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </button>}
         </div>
       </div>
 
@@ -192,7 +201,7 @@ export default function GroupDetail({ onNavigate, onToast }) {
               {expenses.map((exp, i) => {
                 const myShare  = exp.expense_splits?.find(s => Number(s.user_id) === Number(myId));
                 const iPaid    = Number(exp.paid_by) === Number(myId);
-                const emoji    = CATEGORY_EMOJI[exp.category] || '💰';
+                const CatIco   = getCatIcon(exp.category);
                 const catColor = CAT_COLORS[exp.category] || '#CCCCCC';
                 const amt      = parseFloat(exp.amount);
                 const commentsOpen  = openComments[exp.id];
@@ -204,8 +213,8 @@ export default function GroupDetail({ onNavigate, onToast }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 24px', borderBottom: '1px solid #F5F5F5' }}>
 
                       {/* Avatar — spec §2.7, circular */}
-                      <div className="avatar" style={{ background: '#F5F5F5', borderRadius: '50%', fontSize: 20 }}>
-                        {emoji}
+                      <div className="avatar" style={{ background: catColor + '15', borderRadius: '50%', color: catColor }}>
+                        <CatIco />
                       </div>
 
                       {/* Info */}
@@ -357,7 +366,7 @@ export default function GroupDetail({ onNavigate, onToast }) {
         )}
       </div>
 
-      <button className="fab" onClick={() => onNavigate('add-expense')}>＋</button>
+      <button className="fab" onClick={() => onNavigate('add-expense')} style={{ fontSize: 28, lineHeight: 1 }}>＋</button>
     </div>
   );
 }

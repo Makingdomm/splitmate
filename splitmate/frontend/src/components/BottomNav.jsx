@@ -1,4 +1,10 @@
 import React from 'react';
+import {
+  HomeActive, HomeInactive,
+  AnalyticsActive, AnalyticsInactive,
+  WalletActive, WalletInactive,
+  UpgradeActive, UpgradeInactive,
+} from './Icons.jsx';
 
 const TAB_PAGES = {
   'groups':          ['groups','group-detail','create-group','join-group','add-expense','settle','trip-summary'],
@@ -12,28 +18,46 @@ export default function BottomNav({ currentPage, onNavigate, paymentStatus }) {
   const isElite = paymentStatus?.tier === 'elite';
 
   const TABS = [
-    { id:'groups',          icon:'⊞', label:'Home' },
-    { id:'analytics',       icon:'📊', label:'Analytics' },
-    { id:'wallet-settings', icon:'👛', label:'Wallet' },
-    // Always show — "Upgrade" if free, "Plan" if Pro
-    { id:'pro', icon: isElite ? '💎' : isPro ? '⭐' : '⭐', label: isElite ? 'Elite' : isPro ? 'Plan' : 'Upgrade' },
+    {
+      id: 'groups',
+      ActiveIcon: HomeActive,
+      InactiveIcon: HomeInactive,
+      label: 'Home',
+    },
+    {
+      id: 'analytics',
+      ActiveIcon: AnalyticsActive,
+      InactiveIcon: AnalyticsInactive,
+      label: 'Analytics',
+    },
+    {
+      id: 'wallet-settings',
+      ActiveIcon: WalletActive,
+      InactiveIcon: WalletInactive,
+      label: 'Wallet',
+    },
+    {
+      id: 'pro',
+      ActiveIcon: UpgradeActive,
+      InactiveIcon: UpgradeInactive,
+      label: isElite ? 'Elite' : isPro ? 'Plan' : 'Upgrade',
+    },
   ];
 
   return (
     <nav className="bottom-nav">
-      {TABS.map(tab => {
-        const isActive = TAB_PAGES[tab.id]?.includes(currentPage) || currentPage === tab.id;
+      {TABS.map(({ id, ActiveIcon, InactiveIcon, label }) => {
+        const isActive = TAB_PAGES[id]?.includes(currentPage) || currentPage === id;
+        const Ico = isActive ? ActiveIcon : InactiveIcon;
         return (
           <button
-            key={tab.id}
+            key={id}
             className={`nav-item ${isActive ? 'active' : ''}`}
-            onClick={() => onNavigate(tab.id)}
+            onClick={() => onNavigate(id)}
           >
-            <span className="nav-icon" style={{ color: isActive ? '#4B5320' : '#CCCCCC' }}>
-              {tab.icon}
-            </span>
-            <span className="nav-label" style={{ color: isActive ? '#4B5320' : '#CCCCCC' }}>
-              {tab.label}
+            <Ico />
+            <span className="nav-label" style={{ color: isActive ? '#4B5320' : '#999999' }}>
+              {label}
             </span>
           </button>
         );

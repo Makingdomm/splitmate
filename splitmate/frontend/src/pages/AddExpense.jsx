@@ -3,14 +3,14 @@ import useAppStore from '../store/appStore.js';
 import api from '../utils/api.js';
 
 const CATEGORIES = [
-  { value: 'food',          icon: '🍕', name: 'Food' },
-  { value: 'transport',     icon: '🚗', name: 'Transport' },
-  { value: 'accommodation', icon: '🏨', name: 'Hotel' },
-  { value: 'entertainment', icon: '🎬', name: 'Fun' },
-  { value: 'shopping',      icon: '🛍️', name: 'Shop' },
-  { value: 'health',        icon: '💊', name: 'Health' },
-  { value: 'utilities',     icon: '💡', name: 'Bills' },
-  { value: 'general',       icon: '💰', name: 'Other' },
+  { value: 'food',          name: 'Food' },
+  { value: 'transport',     name: 'Transport' },
+  { value: 'accommodation', name: 'Hotel' },
+  { value: 'entertainment', name: 'Fun' },
+  { value: 'shopping', name: 'Shop' },
+  { value: 'health', name: 'Health' },
+  { value: 'utilities', name: 'Bills' },
+  { value: 'general', name: 'Other' },
 ];
 
 const SPLIT_TYPES = [
@@ -219,7 +219,9 @@ export default function AddExpense({ onNavigate, onToast }) {
           <div className="chip-row">
             {CATEGORIES.map(cat => (
               <button key={cat.value} className={`chip ${form.category === cat.value ? 'active' : ''}`} onClick={() => set('category', cat.value)}>
-                <span className="chip-icon">{cat.icon}</span>
+                <span className="chip-icon" style={{ display:'flex', alignItems:'center' }}>
+                  {(() => { const Ico = CatIcons[cat.value] || CatIcons.other; return <Ico />; })()}
+                </span>
                 {cat.name}
               </button>
             ))}
