@@ -5,7 +5,7 @@
 
 import { Telegraf, Markup } from 'telegraf';
 import { config } from '../config/index.js';
-import { upsertUser, isProUser } from '../services/userService.js';
+import { getOrCreateUser as upsertUser, isProUser } from '../services/userService.js';
 import { getUserGroups, getGroupByInviteCode, joinGroup } from '../services/groupService.js';
 import { getGroupBalances } from '../services/expenseService.js';
 import {
