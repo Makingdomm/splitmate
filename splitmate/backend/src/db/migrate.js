@@ -25,7 +25,7 @@ async function runMigration(sql, name) {
 }
 
 // Run migrations directly using postgres URL if available
-async function migrate() {
+export async function runMigrations() {
   const dbUrl = process.env.DATABASE_URL;
   if (!dbUrl) {
     console.log('[migrate] No DATABASE_URL, skipping migrations');
@@ -65,4 +65,3 @@ async function migrate() {
   }
 }
 
-migrate();
