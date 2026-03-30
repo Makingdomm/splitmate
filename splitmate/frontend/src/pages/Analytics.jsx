@@ -104,7 +104,23 @@ export default function Analytics({ onNavigate, onToast }) {
       .finally(() => setLoading(false));
   }, [activeGroup]);
 
-  if (!activeGroup) { onNavigate('groups'); return null; }
+
+  // ── No group selected ────────────────────────────────────────────────────────
+  if (!activeGroup) {
+    return (
+      <div style={{ minHeight:'100vh', background:'#F5F5F5' }}>
+        <div className="page-header">
+          <div className="page-header-title">Analytics</div>
+        </div>
+        <div style={{ padding:'48px 24px', textAlign:'center' }}>
+          <div style={{ marginBottom:16 }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none"><path d="M18 20V10" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 20V4" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M6 20V14" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+          <div style={{ fontSize:20, fontWeight:700, color:'#333', marginBottom:8 }}>No group selected</div>
+          <div style={{ fontSize:14, color:'#CCCCCC', marginBottom:24 }}>Open a group first, then come back to view its analytics.</div>
+          <button className="btn-primary" onClick={() => onNavigate('groups')}>Go to Groups</button>
+        </div>
+      </div>
+    );
+  }
 
   // ── Pro gate — spec §3.1 style ─────────────────────────────────────────────
   if (!paymentStatus?.isPro) {
