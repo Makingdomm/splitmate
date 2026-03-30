@@ -111,11 +111,11 @@ export default function Analytics({ onNavigate, onToast }) {
     return (
       <div style={{ minHeight:'100vh', background:'#F5F5F5' }}>
         <div className="page-header">
-          <button className="btn-icon" onClick={() => onNavigate('group-detail')} style={{ fontSize:20, background:'#F5F5F5' }}>‹</button>
+          <button className="btn-icon" onClick={() => onNavigate('group-detail')} style={{ fontSize:20, background:'#F5F5F5' }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 8L8 12L12 16" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M16 12H8" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
           <div className="page-header-title">Analytics</div>
         </div>
         <div style={{ padding:'48px 24px', textAlign:'center' }}>
-          <div style={{ fontSize:56, marginBottom:16 }}>📊</div>
+          <div style={{ marginBottom:16 }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 1V23" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M17 5H9.5C8.30653 5 7.16193 5.47411 6.31802 6.31802C5.47411 7.16193 5 8.30653 5 9.5C5 10.6935 5.47411 11.8381 6.31802 12.682C7.16193 13.5259 8.30653 14 9.5 14H14.5C15.6935 14 16.8381 14.4741 17.682 15.318C18.5259 16.1619 19 17.3065 19 18.5C19 19.6935 18.5259 20.8381 17.682 21.682C16.8381 22.5259 15.6935 23 14.5 23H7" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
           {/* Heading 1 — 24px bold */}
           <div style={{ fontSize:24, fontWeight:700, color:'#333', marginBottom:8 }}>Pro Feature</div>
           {/* Body Large — 16px */}
@@ -123,7 +123,7 @@ export default function Analytics({ onNavigate, onToast }) {
             Spending analytics, category breakdowns,<br/>member summaries & spending trends.
           </div>
           <button className="btn-primary" onClick={() => onNavigate('pro')}>
-            ⭐ Upgrade to Pro
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> Upgrade to Pro
           </button>
           <div style={{ fontSize:12, color:'#CCCCCC', marginTop:12 }}>Cheaper than Splitwise · Cancel anytime</div>
         </div>
@@ -163,7 +163,7 @@ export default function Analytics({ onNavigate, onToast }) {
 
       {/* ── Header — spec §2.11 ── */}
       <div className="page-header">
-        <button className="btn-icon" onClick={() => onNavigate('group-detail')} style={{ fontSize:20, background:'#F5F5F5' }}>‹</button>
+        <button className="btn-icon" onClick={() => onNavigate('group-detail')} style={{ fontSize:20, background:'#F5F5F5' }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 8L8 12L12 16" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M16 12H8" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
         <div style={{ flex:1 }}>
           {/* Heading 1 24px bold */}
           <div className="page-header-title">Analytics</div>
@@ -218,8 +218,8 @@ export default function Analytics({ onNavigate, onToast }) {
 
         {/* ── Tabs ── */}
         <div className="tabs" style={{ marginBottom:16 }}>
-          {[['overview','📊 Overview'],['members','👥 Members'],['timeline','📈 Timeline']].map(([key,label]) => (
-            <button key={key} className={`tab ${tab===key?'active':''}`} onClick={()=>setTab(key)} style={{ fontSize:11 }}>{label}</button>
+          {[['overview','Overview'],['members','Members'],['timeline','Timeline']].map(([key,label]) => (
+            <button key={key} className={`tab ${tab===key?'active':''}`} onClick={()=>setTab(key)} style={{ fontSize:11 }}>{key==="overview" ? <span style={{display:"flex",alignItems:"center",gap:4}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 3H10V10H3V3Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M14 3H21V10H14V3Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M14 14H21V21H14V14Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 14H10V21H3V14Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>{label}</span> : key==="members" ? <span style={{display:"flex",alignItems:"center",gap:4}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55231C18.7122 5.25391 19.0078 6.11683 19.0078 7.005C19.0078 7.89317 18.7122 8.75609 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>{label}</span> : <span style={{display:"flex",alignItems:"center",gap:4}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>{label}</span>}</button>
           ))}
         </div>
 
@@ -230,7 +230,7 @@ export default function Analytics({ onNavigate, onToast }) {
             <div style={{ fontSize:20, fontWeight:600, color:'#333', lineHeight:'28px', marginBottom:16 }}>Expense Breakdown</div>
             <div className="card" style={{ padding:0, overflow:'hidden', marginBottom:24 }}>
               {data.categories?.length === 0 ? (
-                <div className="empty-state"><div className="empty-icon">📊</div><div className="empty-title">No data yet</div></div>
+                <div className="empty-state"><div className="empty-icon" style={{fontSize:48}}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 2V22L7 20L10 22L13 20L16 22L19 20L22 22V2H4Z" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 6H18" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 10H18" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 14H14" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div><div className="empty-title">No data yet</div></div>
               ) : data.categories?.map((cat,i) => (
                 <div key={cat.name} style={{ display:'flex', alignItems:'center', gap:16, padding:'16px 24px', borderBottom: i < data.categories.length-1 ? '1px solid #F5F5F5' : 'none' }}>
                   {/* Dot — spec §2.4: 8px circle */}
@@ -271,10 +271,10 @@ export default function Analytics({ onNavigate, onToast }) {
             {/* Stats row */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:24 }}>
               {[
-                { label:'Total Spent',  value:`$${data.totalUsd?.toFixed(2)||'0.00'}`,   icon:'💸' },
-                { label:'Expenses',     value: data.expenseCount || 0,                   icon:'🧾' },
-                { label:'Settled',      value:`${data.settlementRate||0}%`,               icon:'✅' },
-                { label:'Members',      value: data.members?.length || 0,                 icon:'👥' },
+                { label:'Total Spent',  value:`$${data.totalUsd?.toFixed(2)||'0.00'}`,   icon:'total_spent' },
+                { label:'Expenses',     value: data.expenseCount || 0,                   icon:'expenses' },
+                { label:'Settled',      value:`${data.settlementRate||0}%`,               icon:'settled' },
+                { label:'Members',      value: data.members?.length || 0,                 icon:'members' },
               ].map((s,i) => (
                 <div key={i} className="card-sm" style={{ textAlign:'center' }}>
                   <div style={{ fontSize:24, marginBottom:6 }}>{s.icon}</div>
@@ -291,7 +291,7 @@ export default function Analytics({ onNavigate, onToast }) {
           <div className="animate-in">
             <div style={{ fontSize:20, fontWeight:600, color:'#333', marginBottom:16 }}>Who Paid the Most</div>
             {!data.members?.length ? (
-              <div className="card"><div className="empty-state"><div className="empty-icon">👥</div><div className="empty-title">No member data</div></div></div>
+              <div className="card"><div className="empty-state"><div className="empty-icon" style={{fontSize:48}}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55231C18.7122 5.25391 19.0078 6.11683 19.0078 7.005C19.0078 7.89317 18.7122 8.75609 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div><div className="empty-title">No member data</div></div></div>
             ) : (
               <div className="card" style={{ padding:0, overflow:'hidden' }}>
                 {data.members.map((m,i) => {
@@ -330,7 +330,7 @@ export default function Analytics({ onNavigate, onToast }) {
           <div className="animate-in">
             <div style={{ fontSize:20, fontWeight:600, color:'#333', marginBottom:16 }}>Monthly Spending</div>
             {!data.timeline?.length ? (
-              <div className="card"><div className="empty-state"><div className="empty-icon">📈</div><div className="empty-title">No timeline data</div></div></div>
+              <div className="card"><div className="empty-state"><div className="empty-icon" style={{fontSize:48}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div><div className="empty-title">No timeline data</div></div></div>
             ) : (
               <div>
                 {data.timeline.slice().reverse().map((t,i) => (

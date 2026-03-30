@@ -46,10 +46,10 @@ export default function GroupList({ onNavigate, onToast }) {
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {isPro && (
               <span className={`badge ${tier === 'elite' ? 'badge-elite' : 'badge-pro'}`}>
-                {tier === 'elite' ? '💎 Elite' : '⭐ Pro'}
+                {tier === 'elite' ? 'Elite' : 'Pro'}
               </span>
             )}
-            <button className="btn-icon circle" onClick={() => onNavigate('wallet')} style={{ fontSize: 18, background: '#F5F5F5', color: '#333' }}>💼</button>
+            <button className="btn-icon circle" onClick={() => onNavigate('wallet')} style={{ background: '#F5F5F5', color: '#4B5320', display:'flex', alignItems:'center', justifyContent:'center', width:36, height:36, border:'none', borderRadius:'50%', cursor:'pointer' }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M20 12V8C20 6.89543 19.1046 6 18 6H4C2.89543 6 2 6.89543 2 8V16C2 17.1046 2.89543 18 4 18H18C19.1046 18 20 17.1046 20 16V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M16 12C16 13.6569 17.3431 15 19 15H22V9H19C17.3431 9 16 10.3431 16 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
           </div>
         </div>
       </div>
@@ -131,7 +131,7 @@ export default function GroupList({ onNavigate, onToast }) {
         {groups.length === 0 ? (
           <div className="card">
             <div className="empty-state">
-              <div className="empty-icon">👥</div>
+              <div className="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8.5 11C10.7091 11 12.5 9.20914 12.5 7C12.5 4.79086 10.7091 3 8.5 3C6.29086 3 4.5 4.79086 4.5 7C4.5 9.20914 6.29086 11 8.5 11Z" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M20 8V14" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M17 11H23" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
               <div className="empty-title">No groups yet</div>
               <div className="empty-desc">Create a group and start splitting expenses with friends</div>
             </div>
@@ -210,7 +210,7 @@ export default function GroupList({ onNavigate, onToast }) {
               boxShadow: 'none',
             }}
           >
-            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(184,150,26,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>⭐</div>
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(184,150,26,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color:'#4B5320' }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 16, fontWeight: 600, color: '#b8961a', marginBottom: 2 }}>Upgrade to Pro</div>
               <div className="list-item-secondary">AI receipts · Analytics · Unlimited groups</div>
@@ -240,9 +240,9 @@ export default function GroupList({ onNavigate, onToast }) {
             <div style={{ fontSize: 16, fontWeight: 700, color: '#333', marginBottom: 20 }}>More Options</div>
 
             {[
-              { icon: '💼', label: 'Wallet & Crypto',  sub: 'Manage your payment methods',  nav: 'wallet-settings' },
-              { icon: '📊', label: 'Analytics',         sub: 'View spending insights',        nav: 'analytics'       },
-              { icon: '⭐', label: isPro ? 'My Plan' : 'Upgrade to Pro', sub: isPro ? 'Manage your subscription' : 'Unlock receipt scanning & more', nav: 'pro' },
+              { icon: 'wallet', label: 'Wallet & Crypto',  sub: 'Manage your payment methods',  nav: 'wallet-settings' },
+              { icon: 'analytics', label: 'Analytics',         sub: 'View spending insights',        nav: 'analytics'       },
+              { icon: 'plan', label: isPro ? 'My Plan' : 'Upgrade to Pro', sub: isPro ? 'Manage your subscription' : 'Unlock receipt scanning & more', nav: 'pro' },
             ].map(item => (
               <button
                 key={item.nav}
@@ -255,7 +255,7 @@ export default function GroupList({ onNavigate, onToast }) {
                 }}
               >
                 <div style={{ width: 44, height: 44, borderRadius: 12, background: '#F5F5F5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
-                  {item.icon}
+                  {item.icon==='wallet' ? <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M20 12V8C20 6.89543 19.1046 6 18 6H4C2.89543 6 2 6.89543 2 8V16C2 17.1046 2.89543 18 4 18H18C19.1046 18 20 17.1046 20 16V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M16 12C16 13.6569 17.3431 15 19 15H22V9H19C17.3431 9 16 10.3431 16 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> : item.icon==='analytics' ? <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M18 20V10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 20V4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M6 20V14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> : item.icon==='plan' ? <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> : item.icon}
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 15, fontWeight: 600, color: '#333', lineHeight: '20px' }}>{item.label}</div>

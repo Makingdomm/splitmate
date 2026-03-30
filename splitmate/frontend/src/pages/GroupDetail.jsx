@@ -139,7 +139,7 @@ export default function GroupDetail({ onNavigate, onToast }) {
 
       {/* ── Header — spec §2.11 ── */}
       <div className="page-header">
-        <button className="btn-icon" onClick={handleBack} style={{ fontSize: 20, background: '#F5F5F5' }}>‹</button>
+        <button className="btn-icon" onClick={handleBack} style={{ fontSize: 20, background: '#F5F5F5' }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 8L8 12L12 16" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M16 12H8" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="page-header-title">{activeGroup.name}</div>
           <div className="page-header-sub">{activeGroup.member_count} members · {activeGroup.currency}</div>
@@ -191,7 +191,7 @@ export default function GroupDetail({ onNavigate, onToast }) {
           expenses.length === 0 ? (
             <div className="card">
               <div className="empty-state">
-                <div className="empty-icon">🧾</div>
+                <div className="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M4 2V22L7 20L10 22L13 20L16 22L19 20L22 22V2H4Z" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 6H18" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 10H18" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 14H14" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
                 <div className="empty-title">No expenses yet</div>
                 <div className="empty-desc">Tap + to log the first expense</div>
               </div>
@@ -226,7 +226,7 @@ export default function GroupDetail({ onNavigate, onToast }) {
                         {/* Secondary — 12px #CCCCCC */}
                         <div className="list-item-secondary">
                           {exp.users?.full_name || 'Someone'} · {fmt(exp.created_at)}
-                          {exp.is_recurring && ' · 🔄'}
+                          {exp.is_recurring && ' · ↻'}
                         </div>
                       </div>
 
@@ -278,7 +278,7 @@ export default function GroupDetail({ onNavigate, onToast }) {
           <div>
             {myWallets !== null && !myWallets.find(w => w.chain === 'TON') && (
               <div className="card card-tappable" onClick={() => onNavigate('wallet-settings')} style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, padding: '16px' }}>
-                <span style={{ fontSize: 24 }}>💎</span>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 3L2 9L12 22L22 9L18 3H6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 22V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 9H22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M6 3L9 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M18 3L15 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>Set up TON wallet</div>
                   <div className="list-item-secondary">Enable instant crypto settlements</div>
@@ -356,7 +356,7 @@ export default function GroupDetail({ onNavigate, onToast }) {
             {(!balances.transactions || balances.transactions.length === 0) && (
               <div className="card">
                 <div className="empty-state">
-                  <div className="empty-icon">🎉</div>
+                  <div className="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 12L11 15L16 9" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
                   <div className="empty-title">All settled up!</div>
                   <div className="empty-desc">No outstanding balances in this group</div>
                 </div>

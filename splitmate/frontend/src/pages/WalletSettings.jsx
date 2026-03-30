@@ -224,7 +224,7 @@ export default function WalletSettings({ onNavigate, onToast }) {
 
       {/* ── Header ── */}
       <div className="page-header">
-        <button className="btn-icon" onClick={() => onNavigate(-1)} style={{ fontSize:20, background:'#F5F5F5' }}>‹</button>
+        <button className="btn-icon" onClick={() => onNavigate(-1)} style={{ fontSize:20, background:'#F5F5F5' }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 8L8 12L12 16" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M16 12H8" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
         <div style={{ flex:1 }}>
           <div className="page-header-title">My Wallets</div>
           <div className="page-header-sub">For crypto settlements with group members</div>

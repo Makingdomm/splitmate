@@ -149,7 +149,7 @@ export default function AddExpense({ onNavigate, onToast }) {
 
       {/* ── Header — spec §2.11 ── */}
       <div className="page-header">
-        <button className="btn-icon" onClick={() => onNavigate('group-detail')} style={{ fontSize: 20, background: '#F5F5F5' }}>‹</button>
+        <button className="btn-icon" onClick={() => onNavigate('group-detail')} style={{ fontSize: 20, background: '#F5F5F5' }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 8L8 12L12 16" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M16 12H8" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
         <div style={{ flex: 1 }}>
           <div className="page-header-title">Add Expense</div>
           <div className="page-header-sub">{activeGroup.name}</div>
@@ -180,7 +180,7 @@ export default function AddExpense({ onNavigate, onToast }) {
         {/* Scan Result Banner */}
         {scanResult && (
           <div className="animate-in" style={{ background: 'rgba(40,167,69,0.08)', border: '1px solid rgba(40,167,69,0.25)', borderRadius: 8, padding: '12px 16px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 20 }}>✅</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 12L11 15L16 9" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#28A745', marginBottom: 2 }}>Receipt scanned!</div>
               <div className="list-item-secondary">{scanResult.merchant} · {scanResult.currency} {scanResult.total}</div>
@@ -313,7 +313,7 @@ export default function AddExpense({ onNavigate, onToast }) {
         {/* ── Recurring — spec §2.10 Toggle ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: '#fff', borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: form.isRecurring ? 16 : 24 }}>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#333' }}>🔄 Recurring expense</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: '#333', display:'flex', alignItems:'center', gap:6 }}>↻ Recurring expense</div>
             <div style={{ fontSize: 12, color: '#CCCCCC', marginTop: 2 }}>Auto-adds on a schedule</div>
           </div>
           <label className="switch">

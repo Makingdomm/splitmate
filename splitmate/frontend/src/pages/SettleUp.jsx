@@ -4,7 +4,7 @@ import useAppStore from '../store/appStore.js';
 import api from '../utils/api.js';
 
 const CHAIN_META = {
-  TON:        { icon:'💎', color:'#0088cc', label:'TON', network:'TON' },
+  TON:        { icon:'◆', color:'#0088cc', label:'TON', network:'TON' },
   ETH:        { icon:'⟠',  color:'#627EEA', label:'ETH' },
   BTC:        { icon:'₿',  color:'#F7931A', label:'BTC' },
   USDT_TRC20: { icon:'💵', color:'#26A17B', label:'USDT' },
@@ -85,7 +85,7 @@ export default function SettleUp({ onNavigate, onToast }) {
 
       {/* ── Header — spec §2.11 ── */}
       <div className="page-header">
-        <button className="btn-icon" onClick={() => onNavigate('group-detail')} style={{ fontSize:20, background:'#F5F5F5' }}>‹</button>
+        <button className="btn-icon" onClick={() => onNavigate('group-detail')} style={{ fontSize:20, background:'#F5F5F5' }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 8L8 12L12 16" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M16 12H8" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
         <div style={{ flex:1 }}>
           <div className="page-header-title">Settle Up</div>
           <div className="page-header-sub">Record your payment</div>
