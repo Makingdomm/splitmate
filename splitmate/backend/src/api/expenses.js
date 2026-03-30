@@ -8,6 +8,7 @@ import {
 import { getGroupMembers, isMember } from '../services/groupService.js';
 import { isProUser } from '../services/userService.js';
 import { recordTonSettlementFee } from '../services/paymentService.js';
+import { notifyNewExpense, notifySettlement } from '../services/notificationService.js';
 import { supabase } from '../db/client.js';
 
 const MAX_LIMIT = 100;
@@ -30,17 +31,11 @@ export default async function expenseRoutes(fastify) {
   // ── POST /api/expenses — Add a new expense ────────────────────────────────
   fastify.post('/', async (req, reply) => {
     const {
-      groupId,
-      amount,
-      currency,
-      description,
-      category,
-      splitType = 'equal',
-      splitData,
-      paidBy,
+      groupId, amount, currency, description, category,
+      splitType = 'equal', splitData, paidBy,
+      isRecurring = false, recurInterval,
     } = req.body || {};
 
-    // Validate inputs
     if (!groupId || !amount || !description) {
       return reply.code(400).send({ error: 'groupId, amount, and description are required' });
     }
@@ -54,7 +49,6 @@ export default async function expenseRoutes(fastify) {
       return reply.code(400).send({ error: 'Description too long (max 200 chars)' });
     }
 
-    // Verify membership
     const member = await isMember(groupId, req.user.telegram_id);
     if (!member) return reply.code(403).send({ error: 'Not a member of this group' });
 
@@ -69,13 +63,32 @@ export default async function expenseRoutes(fastify) {
       }
     }
 
+    // Recurring is Pro-only
+    if (isRecurring) {
+      const isPro = await isProUser(req.user.telegram_id);
+      if (!isPro) {
+        return reply.code(403).send({
+          error: 'PRO_REQUIRED',
+          message: 'Recurring expenses require SplitMate Pro.',
+        });
+      }
+    }
+
     const members = await getGroupMembers(groupId);
     const memberIds = members.map(m => m.telegram_id);
 
-    // Validate paidBy — must be integer and a group member
     const payerId = paidBy ? parseInt(paidBy, 10) : req.user.telegram_id;
     if (isNaN(payerId) || !memberIds.includes(payerId)) {
       return reply.code(400).send({ error: 'Payer must be a group member' });
+    }
+
+    // Calculate recur_next_date
+    let recurNextDate = null;
+    if (isRecurring && recurInterval) {
+      const next = new Date();
+      if (recurInterval === 'weekly') next.setDate(next.getDate() + 7);
+      else if (recurInterval === 'monthly') next.setMonth(next.getMonth() + 1);
+      recurNextDate = next.toISOString();
     }
 
     const result = await addExpense({
@@ -88,7 +101,19 @@ export default async function expenseRoutes(fastify) {
       splitType,
       splitData,
       memberIds,
+      isRecurring,
+      recurInterval,
+      recurNextDate,
     });
+
+    // Fire-and-forget push notification to all other group members
+    const paidByUser = members.find(m => Number(m.telegram_id) === Number(payerId));
+    notifyNewExpense({
+      groupId,
+      expense: result.expense,
+      paidByName: paidByUser?.full_name || 'Someone',
+      actorId: req.user.telegram_id,
+    }).catch(() => {});
 
     return reply.code(201).send(result);
   });
@@ -103,8 +128,6 @@ export default async function expenseRoutes(fastify) {
     if (isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
       return reply.code(400).send({ error: 'Amount must be positive' });
     }
-
-    // Cannot settle with yourself
     if (parseInt(toUserId, 10) === req.user.telegram_id) {
       return reply.code(400).send({ error: 'Cannot settle with yourself' });
     }
@@ -120,7 +143,6 @@ export default async function expenseRoutes(fastify) {
           message: 'TON wallet settlements require SplitMate Pro.',
         });
       }
-      // Only record fee if txHash is provided (on-chain confirmation)
       if (txHash) {
         await recordTonSettlementFee({
           groupId,
@@ -142,6 +164,19 @@ export default async function expenseRoutes(fastify) {
       txHash,
     });
 
+    // Notify the payee
+    const { data: fromUser } = await supabase
+      .from('users').select('full_name').eq('telegram_id', req.user.telegram_id).single();
+    const { data: grp } = await supabase
+      .from('groups').select('name').eq('id', groupId).single();
+    notifySettlement({
+      toUserId:  parseInt(toUserId, 10),
+      fromName:  fromUser?.full_name || 'Someone',
+      amount:    parseFloat(amount),
+      currency:  currency || 'USD',
+      groupName: grp?.name || 'your group',
+    }).catch(() => {});
+
     return { settlement };
   });
 
@@ -157,6 +192,36 @@ export default async function expenseRoutes(fastify) {
     }
   });
 
+  // ── PATCH /api/expenses/:id/recurring — Toggle or update recurring settings
+  fastify.patch('/:id/recurring', async (req, reply) => {
+    const { isRecurring, recurInterval } = req.body || {};
+    const { id } = req.params;
+
+    const { data: expense } = await supabase
+      .from('expenses').select('group_id, paid_by').eq('id', id).maybeSingle();
+    if (!expense) return reply.code(404).send({ error: 'Expense not found' });
+
+    const isPro = await isProUser(req.user.telegram_id);
+    if (!isPro) return reply.code(403).send({ error: 'PRO_REQUIRED', message: 'Recurring requires Pro.' });
+
+    let recurNextDate = null;
+    if (isRecurring && recurInterval) {
+      const next = new Date();
+      if (recurInterval === 'weekly') next.setDate(next.getDate() + 7);
+      else if (recurInterval === 'monthly') next.setMonth(next.getMonth() + 1);
+      recurNextDate = next.toISOString();
+    }
+
+    const { data, error } = await supabase
+      .from('expenses')
+      .update({ is_recurring: isRecurring, recur_interval: recurInterval || null, recur_next_date: recurNextDate })
+      .eq('id', id)
+      .select().single();
+
+    if (error) throw new Error(error.message);
+    return { expense: data };
+  });
+
   // ── GET /api/expenses/:groupId/export — CSV export (Pro only) ─────────────
   fastify.get('/:groupId/export', async (req, reply) => {
     const { groupId } = req.params;
@@ -170,7 +235,7 @@ export default async function expenseRoutes(fastify) {
     const { data, error } = await supabase
       .from('expenses')
       .select(`
-        id, description, amount, currency, amount_usd, category, split_type, created_at,
+        id, description, amount, currency, amount_usd, category, split_type, is_recurring, recur_interval, created_at,
         users!paid_by (full_name, username),
         expense_splits (amount_owed, is_settled)
       `)
@@ -180,7 +245,7 @@ export default async function expenseRoutes(fastify) {
     if (error) return reply.code(500).send({ error: 'Failed to fetch expenses' });
 
     const rows = [
-      ['Date', 'Description', 'Category', 'Amount', 'Currency', 'Amount (USD)', 'Paid By', 'Split Type', 'Settled'].join(','),
+      ['Date', 'Description', 'Category', 'Amount', 'Currency', 'Amount (USD)', 'Paid By', 'Split Type', 'Recurring', 'Settled'].join(','),
     ];
 
     for (const exp of data || []) {
@@ -188,7 +253,8 @@ export default async function expenseRoutes(fastify) {
       const settled = exp.expense_splits?.every(s => s.is_settled) ? 'Yes' : 'No';
       const date    = new Date(exp.created_at).toISOString().split('T')[0];
       const desc    = `"${(exp.description || '').replace(/"/g, '""')}"`;
-      rows.push([date, desc, exp.category, exp.amount, exp.currency, exp.amount_usd, `"${paidBy}"`, exp.split_type, settled].join(','));
+      const recur   = exp.is_recurring ? (exp.recur_interval || 'yes') : 'No';
+      rows.push([date, desc, exp.category, exp.amount, exp.currency, exp.amount_usd, `"${paidBy}"`, exp.split_type, recur, settled].join(','));
     }
 
     const csv = rows.join('\n');
@@ -198,7 +264,6 @@ export default async function expenseRoutes(fastify) {
   });
 
   // ── GET /api/expenses/:groupId/analytics — Spending analytics (Pro only) ──
-  // FIX: was accidentally placed outside the export function — route was never registered
   fastify.get('/:groupId/analytics', async (req, reply) => {
     const { groupId } = req.params;
 
@@ -208,7 +273,6 @@ export default async function expenseRoutes(fastify) {
     const isPro = await isProUser(req.user.telegram_id);
     if (!isPro) return reply.code(403).send({ error: 'PRO_REQUIRED', message: 'Analytics is a Pro feature.' });
 
-    // Fetch all expenses with splits
     const { data: expenses, error } = await supabase
       .from('expenses')
       .select(`
@@ -222,25 +286,17 @@ export default async function expenseRoutes(fastify) {
     if (error) return reply.code(500).send({ error: 'Failed to fetch analytics' });
 
     const list = expenses || [];
-
-    // ── Total spent (USD) ──────────────────────────────────────────────────
     const totalUsd = list.reduce((s, e) => s + (e.amount_usd || 0), 0);
 
-    // ── By category ───────────────────────────────────────────────────────
     const byCategory = {};
     for (const e of list) {
       const cat = e.category || 'other';
       byCategory[cat] = (byCategory[cat] || 0) + (e.amount_usd || 0);
     }
     const categories = Object.entries(byCategory)
-      .map(([name, total]) => ({
-        name,
-        total: +total.toFixed(2),
-        pct: totalUsd > 0 ? +(total / totalUsd * 100).toFixed(1) : 0,
-      }))
+      .map(([name, total]) => ({ name, total: +total.toFixed(2), pct: totalUsd > 0 ? +(total / totalUsd * 100).toFixed(1) : 0 }))
       .sort((a, b) => b.total - a.total);
 
-    // ── By member (who paid most) ──────────────────────────────────────────
     const byMember = {};
     for (const e of list) {
       const uid = e.users?.id?.toString();
@@ -259,46 +315,17 @@ export default async function expenseRoutes(fastify) {
       .map(([id, d]) => ({ id, name: d.name, paid: +d.paid.toFixed(2), owed: +d.owed.toFixed(2) }))
       .sort((a, b) => b.paid - a.paid);
 
-    // ── By month (spending over time) ─────────────────────────────────────
-    const byMonth = {};
+    // Timeline: group by week
+    const byWeek = {};
     for (const e of list) {
-      const month = e.created_at?.slice(0, 7) || 'unknown'; // YYYY-MM
-      byMonth[month] = (byMonth[month] || 0) + (e.amount_usd || 0);
+      const d = new Date(e.created_at);
+      const week = `${d.getFullYear()}-W${String(Math.ceil((d.getDate()) / 7)).padStart(2, '0')}`;
+      byWeek[week] = (byWeek[week] || 0) + (e.amount_usd || 0);
     }
-    const timeline = Object.entries(byMonth)
-      .map(([month, total]) => ({ month, total: +total.toFixed(2) }))
-      .sort((a, b) => a.month.localeCompare(b.month));
+    const timeline = Object.entries(byWeek)
+      .map(([week, total]) => ({ week, total: +total.toFixed(2) }))
+      .sort((a, b) => a.week.localeCompare(b.week));
 
-    // ── Top 5 expenses ────────────────────────────────────────────────────
-    const top5 = [...list]
-      .sort((a, b) => (b.amount_usd || 0) - (a.amount_usd || 0))
-      .slice(0, 5)
-      .map(e => ({
-        description: e.description,
-        amount: e.amount,
-        currency: e.currency,
-        amountUsd: e.amount_usd,
-        category: e.category,
-        paidBy: e.users?.full_name || e.users?.username || 'Unknown',
-        date: e.created_at?.slice(0, 10),
-      }));
-
-    // ── Settlement rate ────────────────────────────────────────────────────
-    const allSplits = list.flatMap(e => e.expense_splits || []);
-    const settledCount = allSplits.filter(s => s.is_settled).length;
-    const settlementRate = allSplits.length > 0
-      ? +(settledCount / allSplits.length * 100).toFixed(1)
-      : 100;
-
-    return {
-      totalUsd: +totalUsd.toFixed(2),
-      expenseCount: list.length,
-      settlementRate,
-      categories,
-      members,
-      timeline,
-      top5,
-    };
+    return { totalUsd: +totalUsd.toFixed(2), categories, members, timeline, expenseCount: list.length };
   });
-
 }

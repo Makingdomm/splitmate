@@ -1,6 +1,5 @@
 // =============================================================================
 // index.js — Main application entry point
-// Sets up Fastify server, registers all routes, and starts the bot webhook
 // =============================================================================
 
 import Fastify from 'fastify';
@@ -16,35 +15,21 @@ import paymentRoutes from './api/payments.js';
 import receiptRoutes from './api/receipts.js';
 import walletRoutes  from './api/wallets.js';
 import tonRoutes     from './api/ton.js';
+import commentRoutes from './api/comments.js';
 import cron from 'node-cron';
 import { sendDebtReminders } from './bot/reminders.js';
+import { processRecurringExpenses } from './services/recurringService.js';
 import { runMigrations } from './db/migrate.js';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Create Fastify instance
-// ─────────────────────────────────────────────────────────────────────────────
 const fastify = Fastify({
   logger: config.NODE_ENV === 'development',
-  trustProxy: true, // Required for Railway/Vercel deployments behind a proxy
+  trustProxy: true,
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Global error handler — catches unhandled route errors cleanly
-// ─────────────────────────────────────────────────────────────────────────────
 fastify.setErrorHandler((err, req, reply) => {
   console.error(`[ERROR] ${req.method} ${req.url}:`, err.message);
-
-  // Fastify validation errors
-  if (err.validation) {
-    return reply.code(400).send({ error: 'VALIDATION_ERROR', message: err.message });
-  }
-
-  // Rate limit errors
-  if (err.statusCode === 429) {
-    return reply.code(429).send({ error: 'TOO_MANY_REQUESTS', message: 'Too many requests. Please slow down.' });
-  }
-
-  // Don't leak internal errors to client
+  if (err.validation) return reply.code(400).send({ error: 'VALIDATION_ERROR', message: err.message });
+  if (err.statusCode === 429) return reply.code(429).send({ error: 'TOO_MANY_REQUESTS', message: 'Too many requests. Please slow down.' });
   const statusCode = err.statusCode || 500;
   reply.code(statusCode).send({
     error: statusCode === 500 ? 'INTERNAL_ERROR' : err.code || 'ERROR',
@@ -52,115 +37,69 @@ fastify.setErrorHandler((err, req, reply) => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Global plugins
-// ─────────────────────────────────────────────────────────────────────────────
-
-// CORS — allow requests from our Mini App frontend
 await fastify.register(cors, {
   origin: (origin, cb) => {
-    // Allow: no origin (server-to-server), Telegram web, our Mini App, Vercel previews
     if (!origin) return cb(null, true);
-    const allowed = [
-      config.MINI_APP_URL,
-      'https://web.telegram.org',
-      'https://webk.telegram.org',
-      'https://webz.telegram.org',
-    ];
+    const allowed = [config.MINI_APP_URL, 'https://web.telegram.org', 'https://webk.telegram.org', 'https://webz.telegram.org'];
     const isAllowed =
       allowed.some(u => origin === u || origin.startsWith(u)) ||
       /https:\/\/frontend.*vercel\.app$/.test(origin) ||
       /https:\/\/.*\.vercel\.app$/.test(origin);
     cb(null, isAllowed);
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'x-telegram-init-data'],
   credentials: false,
 });
 
-// Security headers
-await fastify.register(helmet, {
-  contentSecurityPolicy: false, // Mini Apps need this off for Telegram iframe
-});
+await fastify.register(helmet, { contentSecurityPolicy: false });
 
-// Rate limiting — protect against abuse
 await fastify.register(rateLimit, {
-  max: 120,           // 120 requests per minute per IP/user
+  max: 120,
   timeWindow: '1 minute',
   keyGenerator: (req) => {
-    // Use telegram_id for more accurate per-user limiting
     const initData = req.headers['x-telegram-init-data'] || '';
     const match = initData.match(/user=%7B%22id%22%3A(\d+)/);
     return match ? `user_${match[1]}` : req.ip;
   },
-  errorResponseBuilder: () => ({
-    error: 'TOO_MANY_REQUESTS',
-    message: 'Too many requests. Please slow down.',
-  }),
+  errorResponseBuilder: () => ({ error: 'TOO_MANY_REQUESTS', message: 'Too many requests. Please slow down.' }),
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Health check — used by Railway to confirm the app is running
-// ─────────────────────────────────────────────────────────────────────────────
-fastify.get('/health', async () => ({
-  status: 'ok',
-  version: '1.0.1',
-  timestamp: new Date().toISOString(),
-}));
+fastify.get('/health', async () => ({ status: 'ok', version: '1.2.0', timestamp: new Date().toISOString() }));
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Telegram Webhook — receives all bot updates
-// POST /webhook/:secret — the secret in the URL provides basic security
-// ─────────────────────────────────────────────────────────────────────────────
 fastify.post(
   `/webhook/${config.BOT_SECRET}`,
   { preHandler: webhookMiddleware },
   async (req, reply) => {
-    try {
-      await bot.handleUpdate(req.body);
-      return reply.code(200).send({ ok: true });
-    } catch (err) {
-      console.error('Webhook handling error:', err);
-      // Always return 200 to Telegram — otherwise it will retry endlessly
-      return reply.code(200).send({ ok: false });
-    }
+    try { await bot.handleUpdate(req.body); return reply.code(200).send({ ok: true }); }
+    catch (err) { console.error('Webhook handling error:', err); return reply.code(200).send({ ok: false }); }
   }
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// API Routes — all require authentication via Telegram initData
-// (except routes that set config.skipAuth = true)
-// ─────────────────────────────────────────────────────────────────────────────
 fastify.register(async (instance) => {
-  // Apply auth middleware to all /api/* routes (skipAuth routes opt out)
   instance.addHook('preHandler', authMiddleware);
-
   instance.register(groupRoutes,   { prefix: '/api/groups' });
   instance.register(expenseRoutes, { prefix: '/api/expenses' });
   instance.register(paymentRoutes, { prefix: '/api/payments' });
   instance.register(receiptRoutes, { prefix: '/api/receipts' });
   instance.register(walletRoutes,  { prefix: '/api/wallets' });
   instance.register(tonRoutes,     { prefix: '/api/ton' });
+  instance.register(commentRoutes, { prefix: '/api/comments' });
   instance.register((await import('./api/admin.js')).default, { prefix: '/api/admin' });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Scheduled Jobs
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Send debt reminders daily at 10:00 AM UTC
+// ── Daily debt reminders at 10:00 AM UTC
 cron.schedule('0 10 * * *', async () => {
-  try {
-    console.log('[CRON] Running daily debt reminders...');
-    await sendDebtReminders();
-  } catch (err) {
-    console.error('[CRON] Reminder job failed:', err);
-  }
+  try { console.log('[CRON] Running daily debt reminders...'); await sendDebtReminders(); }
+  catch (err) { console.error('[CRON] Reminder job failed:', err); }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Admin route — manual trigger for reminder job (protected by BOT_SECRET)
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Recurring expenses: run at 08:00 AM UTC every day
+cron.schedule('0 8 * * *', async () => {
+  try { console.log('[CRON] Processing recurring expenses...'); await processRecurringExpenses(); }
+  catch (err) { console.error('[CRON] Recurring job failed:', err); }
+});
+
 fastify.post('/api/admin/trigger-reminders', async (req, reply) => {
   const secret = req.headers['x-admin-secret'];
   if (secret !== config.BOT_SECRET) return reply.code(401).send({ error: 'Unauthorized' });
@@ -168,13 +107,9 @@ fastify.post('/api/admin/trigger-reminders', async (req, reply) => {
   return { success: true, message: 'Reminders triggered' };
 });
 
-
-// ── Standalone admin migration (no auth wrapper) ──────────────────────────
 fastify.post('/admin/run-migration', async (req, reply) => {
   const secret = req.headers['x-admin-secret'];
-  if (secret !== process.env.BOT_SECRET) {
-    return reply.code(403).send({ error: 'Forbidden' });
-  }
+  if (secret !== process.env.BOT_SECRET) return reply.code(403).send({ error: 'Forbidden' });
   try {
     const { default: postgres } = await import('postgres');
     const sql = postgres(process.env.DATABASE_URL, { ssl: 'require', max: 1 });
@@ -186,63 +121,32 @@ fastify.post('/admin/run-migration', async (req, reply) => {
     `;
     await sql.end();
     return reply.send({ ok: true, updated: result });
-  } catch (e) {
-    return reply.code(500).send({ error: e.message });
-  }
+  } catch (e) { return reply.code(500).send({ error: e.message }); }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Graceful shutdown
-// ─────────────────────────────────────────────────────────────────────────────
 const shutdown = async (signal) => {
   console.log(`[SHUTDOWN] Received ${signal}, closing server...`);
-  try {
-    await fastify.close();
-    console.log('[SHUTDOWN] Server closed cleanly');
-    process.exit(0);
-  } catch (err) {
-    console.error('[SHUTDOWN] Error during shutdown:', err);
-    process.exit(1);
-  }
+  try { await fastify.close(); console.log('[SHUTDOWN] Server closed cleanly'); process.exit(0); }
+  catch (err) { console.error('[SHUTDOWN] Error during shutdown:', err); process.exit(1); }
 };
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT',  () => shutdown('SIGINT'));
+process.on('uncaughtException', (err) => { console.error('[UNCAUGHT EXCEPTION]', err); });
+process.on('unhandledRejection', (reason) => { console.error('[UNHANDLED REJECTION]', reason); });
 
-// Handle uncaught errors to prevent silent crashes
-process.on('uncaughtException', (err) => {
-  console.error('[UNCAUGHT EXCEPTION]', err);
-  // Don't exit — Railway will restart on crash; log and continue
-});
-
-process.on('unhandledRejection', (reason) => {
-  console.error('[UNHANDLED REJECTION]', reason);
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Start server
-// ─────────────────────────────────────────────────────────────────────────────
 const start = async () => {
   try {
-    // Run database migrations
     await runMigrations();
-
-    // Register webhook with Telegram
     const webhookUrl = `${config.APP_URL}/webhook/${config.BOT_SECRET}`;
     await bot.telegram.setWebhook(webhookUrl, {
       secret_token: config.BOT_SECRET,
-      allowed_updates: [
-        'message', 'callback_query', 'pre_checkout_query',
-        'my_chat_member', 'inline_query'
-      ],
+      allowed_updates: ['message', 'callback_query', 'pre_checkout_query', 'my_chat_member', 'inline_query'],
     });
     console.log(`✅ Webhook set: ${webhookUrl}`);
-
-    // Start the HTTP server
     await fastify.listen({ port: config.PORT, host: '0.0.0.0' });
     console.log(`🚀 SplitMate backend running on port ${config.PORT}`);
     console.log(`🌍 Environment: ${config.NODE_ENV}`);
-
   } catch (err) {
     console.error('Failed to start server:', err);
     process.exit(1);
