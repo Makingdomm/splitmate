@@ -1,11 +1,11 @@
 // =============================================================================
-// services/receiptService.js — Receipt scanning via Gemini 2.0 Flash
+// services/receiptService.js — Receipt scanning via Gemini 2.5 Flash
 // Accepts a base64 image, returns structured expense data
 // =============================================================================
 
 import { config } from '../config/index.js';
 
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_API = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${config.GEMINI_API_KEY}`;
 
 const PROMPT = `You are a receipt parser. Extract the following from this receipt image and return ONLY valid JSON — no markdown, no explanation, no code fences.
