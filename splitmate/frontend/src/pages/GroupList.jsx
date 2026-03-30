@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NewGroupIcon, JoinGroupIcon, MoreIcon } from '../components/Icons.jsx';
 import useAppStore from '../store/appStore.js';
 
@@ -15,6 +15,7 @@ const CAT_COLORS = ['#4B5320','#DC3545','#FFC107','#28A745','#6B7B3A'];
 
 export default function GroupList({ onNavigate, onToast }) {
   const { groups, user, paymentStatus, setActiveGroup } = useAppStore();
+  const [showMore, setShowMore] = useState(false);
 
   const handleGroupClick = async (group) => {
     await setActiveGroup(group);
@@ -112,7 +113,7 @@ export default function GroupList({ onNavigate, onToast }) {
               <span className="qa-icon"><JoinGroupIcon /></span>
               Join Group
             </button>
-            <button className="qa-btn more" onClick={() => onNavigate('wallet-settings')}>
+            <button className="qa-btn more" onClick={() => setShowMore(true)}>
               <span className="qa-icon"><MoreIcon /></span>
               More
             </button>
@@ -219,6 +220,64 @@ export default function GroupList({ onNavigate, onToast }) {
         )}
 
       </div>
+      {/* ── More Bottom Sheet ── */}
+      {showMore && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setShowMore(false)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 100 }}
+          />
+          {/* Sheet */}
+          <div style={{
+            position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 101,
+            background: '#fff', borderRadius: '20px 20px 0 0',
+            padding: '12px 24px 40px', boxShadow: '0 -4px 24px rgba(0,0,0,0.12)',
+            animation: 'slideUp 0.22s ease',
+          }}>
+            {/* Handle */}
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: '#E0E0E0', margin: '0 auto 20px' }} />
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#333', marginBottom: 20 }}>More Options</div>
+
+            {[
+              { icon: '💼', label: 'Wallet & Crypto',  sub: 'Manage your payment methods',  nav: 'wallet-settings' },
+              { icon: '📊', label: 'Analytics',         sub: 'View spending insights',        nav: 'analytics'       },
+              { icon: '⭐', label: isPro ? 'My Plan' : 'Upgrade to Pro', sub: isPro ? 'Manage your subscription' : 'Unlock receipt scanning & more', nav: 'pro' },
+            ].map(item => (
+              <button
+                key={item.nav}
+                onClick={() => { setShowMore(false); onNavigate(item.nav); }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 16,
+                  padding: '14px 0', background: 'none', border: 'none',
+                  borderBottom: '1px solid #F5F5F5', cursor: 'pointer', textAlign: 'left',
+                  fontFamily: 'inherit',
+                }}
+              >
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: '#F5F5F5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
+                  {item.icon}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: '#333', lineHeight: '20px' }}>{item.label}</div>
+                  <div style={{ fontSize: 12, color: '#AAAAAA', marginTop: 2 }}>{item.sub}</div>
+                </div>
+                <div style={{ color: '#CCCCCC', fontSize: 18 }}>›</div>
+              </button>
+            ))}
+
+            <button
+              onClick={() => setShowMore(false)}
+              style={{
+                width: '100%', marginTop: 16, padding: '14px',
+                background: '#F5F5F5', border: 'none', borderRadius: 12,
+                fontSize: 15, fontWeight: 600, color: '#333',
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >Cancel</button>
+          </div>
+        </>
+      )}
+
     </div>
   );
 }
