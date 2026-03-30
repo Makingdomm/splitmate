@@ -1,4 +1,5 @@
 import React from 'react';
+import { NewGroupIcon, JoinGroupIcon, MoreIcon } from '../components/Icons.jsx';
 import useAppStore from '../store/appStore.js';
 
 // Per spec §3.2: Group cards use military green gradients (mini credit card style)
