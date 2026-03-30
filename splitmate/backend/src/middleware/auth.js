@@ -59,10 +59,11 @@ export const authMiddleware = async (req, reply) => {
     const telegramUser = validateTelegramInitData(initData);
 
     const user = await upsertUser({
-      telegram_id: telegramUser.id,
-      username:    telegramUser.username,
-      full_name:   `${telegramUser.first_name} ${telegramUser.last_name || ''}`.trim(),
-      photo_url:   telegramUser.photo_url,
+      id:         telegramUser.id,
+      username:   telegramUser.username,
+      first_name: telegramUser.first_name,
+      last_name:  telegramUser.last_name || '',
+      photo_url:  telegramUser.photo_url,
     });
 
     req.user = user;
