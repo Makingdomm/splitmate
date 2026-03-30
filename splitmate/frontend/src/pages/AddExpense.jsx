@@ -196,7 +196,12 @@ export default function AddExpense({ onNavigate, onToast }) {
               type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*"
               placeholder="0.00"
               value={form.amount}
-              onChange={e => set('amount', e.target.value.replace(',', '.'))}
+              onChange={e => {
+                let v = e.target.value.replace(',', '.').replace(/[^0-9.]/g, '');
+                const parts = v.split('.');
+                if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
+                set('amount', v);
+              }}
               style={{ flex: 1, maxWidth: 180 }}
             />
           </div>
