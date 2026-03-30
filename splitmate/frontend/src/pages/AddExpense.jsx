@@ -193,10 +193,10 @@ export default function AddExpense({ onNavigate, onToast }) {
             {/* Amount input — Display 32px bold */}
             <input
               className="field-input amount-input"
-              type="number" inputMode="decimal" step="0.01" min="0"
+              type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*"
               placeholder="0.00"
               value={form.amount}
-              onChange={e => set('amount', e.target.value)}
+              onChange={e => set('amount', e.target.value.replace(',', '.'))}
               style={{ flex: 1, maxWidth: 180 }}
             />
           </div>
