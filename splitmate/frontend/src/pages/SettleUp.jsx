@@ -4,7 +4,7 @@ import useAppStore from '../store/appStore.js';
 import api from '../utils/api.js';
 
 const CHAIN_META = {
-  TON:        { icon:'💎', color:'#0088cc', label:'TON' },
+  TON:        { icon:'💎', color:'#0088cc', label:'TON', network:'TON' },
   ETH:        { icon:'⟠',  color:'#627EEA', label:'ETH' },
   BTC:        { icon:'₿',  color:'#F7931A', label:'BTC' },
   USDT_TRC20: { icon:'💵', color:'#26A17B', label:'USDT' },
