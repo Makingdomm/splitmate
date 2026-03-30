@@ -1,12 +1,12 @@
 #!/bin/bash
-# Reddit Post Skill
-# Usage: reddit_post.sh <subreddit> <title> <body>
+# Reddit Comment Engagement Skill
+# Posts a comment on a Reddit thread
+# Usage: reddit_engage.sh <post_id> <comment_body>
 
 source /app/.agents/.env
 
-SUBREDDIT="$1"
-TITLE="$2"
-BODY="$3"
+POST_ID="$1"
+COMMENT="$2"
 
 TOKEN=$(curl -s -X POST "https://www.reddit.com/api/v1/access_token" \
   -u "$REDDIT_CLIENT_ID:$REDDIT_CLIENT_SECRET" \
@@ -19,14 +19,11 @@ if [ -z "$TOKEN" ]; then
   exit 1
 fi
 
-RESPONSE=$(curl -s -X POST "https://oauth.reddit.com/api/submit" \
+RESPONSE=$(curl -s -X POST "https://oauth.reddit.com/api/comment" \
   -H "Authorization: Bearer $TOKEN" \
   -H "User-Agent: SplitMateBot/1.0 by Material-Class8306" \
-  --data-urlencode "sr=$SUBREDDIT" \
-  --data-urlencode "kind=self" \
-  --data-urlencode "title=$TITLE" \
-  --data-urlencode "text=$BODY" \
-  --data-urlencode "resubmit=true" \
+  --data-urlencode "thing_id=t3_$POST_ID" \
+  --data-urlencode "text=$COMMENT" \
   --data-urlencode "api_type=json")
 
 echo "$RESPONSE"
