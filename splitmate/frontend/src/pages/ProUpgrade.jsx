@@ -11,7 +11,7 @@ export default function ProUpgrade({ onNavigate }) {
   const handleUpgrade = async (stars) => {
     setLoading(true); setMsg('');
     try { await upgradeToProMessage(stars); setMsg('Invoice sent! Complete payment in your Telegram chat.'); }
-    catch (e) { setMsg('❌ ' + (e.message||'Something went wrong')); }
+    catch (e) { setMsg( 'Something went wrong'); }
     finally { setLoading(false); }
   };
 
@@ -20,7 +20,7 @@ export default function ProUpgrade({ onNavigate }) {
     try {
       await fetchPaymentStatus();
       const updated = useAppStore.getState().paymentStatus;
-      if (updated?.isPro) setMsg(`updated.tier==='elite'?'Elite':'Standard'} plan activated!`);
+      if (updated?.isPro) setMsg(`${updated.tier==='elite'?'Elite':'Standard'} plan activated!`);
       else setMsg('Payment not found yet. Try again in a moment.');
     } catch { setMsg('Failed to verify'); }
     finally { setVerifying(false); }
@@ -59,7 +59,10 @@ export default function ProUpgrade({ onNavigate }) {
                 'TON settlements',
                 ...(isElite ? ['Analytics', 'Priority support'] : []),
               ].map((f,i) => (
-                <div key={i} style={{ background:'rgba(255,255,255,0.12)', borderRadius:8, padding:'8px 10px', fontSize:12, color:'#fff', textAlign:'left' }}>{f}</div>
+                <div key={i} style={{ background:'rgba(255,255,255,0.12)', borderRadius:8, padding:'8px 10px', fontSize:12, color:'#fff', textAlign:'left', display:'flex', alignItems:'center', gap:6 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17L4 12" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  {f}
+                </div>
               ))}
             </div>
           </div>
@@ -71,7 +74,7 @@ export default function ProUpgrade({ onNavigate }) {
               <div style={{ fontSize:14, color:'#CCCCCC', marginBottom:16 }}>Analytics dashboard, priority support & early features.</div>
               <button className="btn-primary" onClick={() => handleUpgrade(elitePrice)} disabled={loading}>
                 {loading ? <span className="spinner" style={{width:16,height:16,borderColor:'rgba(255,255,255,0.3)',borderTopColor:'#fff'}} /> : null}
-                {loading ? 'Sending…' : `Upgrade for ${elitePrice} ` + '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>'}
+                {loading ? 'Sending…' : `Upgrade for ${elitePrice} ★`}
               </button>
               {msg && <div style={{ marginTop:10, fontSize:13, color: msg.startsWith('✅')||msg.startsWith('🎉')||msg.includes('activated')||msg.includes('sent') ? '#28A745' : '#DC3545', textAlign:'center' }}>{msg}</div>}
             </div>
@@ -107,7 +110,7 @@ export default function ProUpgrade({ onNavigate }) {
               <div style={{ fontSize:12, color:'#CCCCCC' }}>Per month</div>
             </div>
             <div style={{ textAlign:'right' }}>
-              <div style={{ fontSize:24, fontWeight:700, color:'#333' }}>{standardPrice} ⭐</div>
+              <div style={{ fontSize:24, fontWeight:700, color:'#333', display:'flex', alignItems:'center', gap:6 }}>{standardPrice} <svg width='20' height='20' viewBox='0 0 24 24' fill='none'><path d='M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z' stroke='#4B5320' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'/></svg></div>
               <div style={{ fontSize:11, color:'#CCCCCC' }}>Telegram Stars</div>
             </div>
           </div>
@@ -132,7 +135,7 @@ export default function ProUpgrade({ onNavigate }) {
               <div style={{ fontSize:12, color:'#CCCCCC' }}>Per month</div>
             </div>
             <div style={{ textAlign:'right' }}>
-              <div style={{ fontSize:24, fontWeight:700, color:'#4B5320' }}>{elitePrice} ⭐</div>
+              <div style={{ fontSize:24, fontWeight:700, color:'#4B5320', display:'flex', alignItems:'center', gap:6 }}>{elitePrice} <svg width='20' height='20' viewBox='0 0 24 24' fill='none'><path d='M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z' stroke='#4B5320' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'/></svg></div>
               <div style={{ fontSize:11, color:'#CCCCCC' }}>Telegram Stars</div>
             </div>
           </div>
