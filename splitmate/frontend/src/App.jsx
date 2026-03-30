@@ -1,57 +1,32 @@
-// =============================================================================
-// App.jsx — Root component with routing and theme setup
-// Uses Telegram's native color scheme for seamless UI integration
-// TGAnalytics SDK integrated — token from TON Builders → Analytics tab
-// =============================================================================
-
 import React, { useEffect, useState, useCallback } from 'react';
 import useAppStore from './store/appStore.js';
-import GroupList from './pages/GroupList.jsx';
-import GroupDetail from './pages/GroupDetail.jsx';
-import AddExpense from './pages/AddExpense.jsx';
-import SettleUp         from './pages/SettleUp.jsx';
-import WalletSettings  from './pages/WalletSettings.jsx';
-import ProUpgrade from './pages/ProUpgrade.jsx';
-import CreateGroup from './pages/CreateGroup.jsx';
-import JoinGroup from './pages/JoinGroup.jsx';
-import Analytics from './pages/Analytics.jsx';
-import BottomNav from './components/BottomNav.jsx';
-import LoadingScreen from './components/LoadingScreen.jsx';
-import Toast from './components/Toast.jsx';
-
-// ── TGAnalytics SDK ────────────────────────────────────────────────────────
-const TG_ANALYTICS_TOKEN    = import.meta.env.VITE_TG_ANALYTICS_TOKEN || '';
-const TG_ANALYTICS_APP_NAME = import.meta.env.VITE_TG_ANALYTICS_APP_NAME || 'splitmate';
-
-function initTGAnalytics() {
-  if (!TG_ANALYTICS_TOKEN) return;
-  try {
-    import('@telegram-apps/analytics').then(({ default: TelegramAnalytics }) => {
-      TelegramAnalytics.init({
-        token: TG_ANALYTICS_TOKEN,
-        appName: TG_ANALYTICS_APP_NAME,
-      });
-      console.log('[Analytics] TGAnalytics initialized');
-    }).catch(e => console.warn('[Analytics] TGAnalytics failed:', e.message));
-  } catch (e) {
-    console.warn('[Analytics] TGAnalytics init error:', e.message);
-  }
-}
+import GroupList      from './pages/GroupList.jsx';
+import GroupDetail    from './pages/GroupDetail.jsx';
+import AddExpense     from './pages/AddExpense.jsx';
+import SettleUp       from './pages/SettleUp.jsx';
+import WalletSettings from './pages/WalletSettings.jsx';
+import ProUpgrade     from './pages/ProUpgrade.jsx';
+import CreateGroup    from './pages/CreateGroup.jsx';
+import JoinGroup      from './pages/JoinGroup.jsx';
+import Analytics      from './pages/Analytics.jsx';
+import BottomNav      from './components/BottomNav.jsx';
+import LoadingScreen  from './components/LoadingScreen.jsx';
+import Toast          from './components/Toast.jsx';
 
 export default function App() {
-  const { initUser, fetchGroups, fetchPaymentStatus, loading, error, clearError } = useAppStore();
-  const [page, setPage] = useState('groups');
+  const { initUser, fetchGroups, fetchPaymentStatus, paymentStatus, loading, error, clearError } = useAppStore();
+  const [page, setPage]             = useState('groups');
   const [pageHistory, setPageHistory] = useState([]);
   const [initialized, setInitialized] = useState(false);
-  const [toast, setToast] = useState(null);
+  const [toast, setToast]           = useState(null);
 
   const navigateTo = useCallback((target) => {
     if (target === -1) {
       setPageHistory(prev => {
-        const newHistory = [...prev];
-        const prevPage = newHistory.pop() || 'groups';
+        const next = [...prev];
+        const prevPage = next.pop() || 'groups';
         setPage(prevPage);
-        return newHistory;
+        return next;
       });
     } else {
       setPageHistory(prev => [...prev, page]);
@@ -63,65 +38,33 @@ export default function App() {
     setToast({ message, type, key: Date.now() });
   }, []);
 
-  // ── Bootstrap the app ──────────────────────────────────────────────────────
+  // Bootstrap
   useEffect(() => {
     const init = async () => {
-      initTGAnalytics();
       initUser();
-
       const tg = window.Telegram?.WebApp;
-      if (tg) {
-        tg.ready();
-        tg.expand();
-        tg.enableClosingConfirmation();
-      }
-
-      try {
-        await Promise.all([fetchGroups(), fetchPaymentStatus()]);
-      } catch (err) {
-        console.warn('Init fetch failed:', err.message);
-      }
-
+      if (tg) { tg.ready(); tg.expand(); tg.enableClosingConfirmation(); }
+      try { await Promise.all([fetchGroups(), fetchPaymentStatus()]); }
+      catch (err) { console.warn('Init failed:', err.message); }
       setInitialized(true);
     };
     init();
-
-    // Apply Telegram's theme colors as CSS variables
-    const tg = window.Telegram?.WebApp;
-    if (tg) {
-      const root = document.documentElement;
-      root.style.setProperty('--tg-bg',           tg.backgroundColor || '#18181b');
-      root.style.setProperty('--tg-secondary-bg',  tg.secondaryBackgroundColor || '#27272a');
-      root.style.setProperty('--tg-text',          tg.themeParams?.text_color || '#ffffff');
-      root.style.setProperty('--tg-hint',          tg.themeParams?.hint_color || '#a1a1aa');
-      root.style.setProperty('--tg-link',          tg.themeParams?.link_color || '#6366f1');
-      root.style.setProperty('--tg-button',        tg.themeParams?.button_color || '#6366f1');
-      root.style.setProperty('--tg-button-text',   tg.themeParams?.button_text_color || '#ffffff');
-    }
   }, []);
 
-  // Show toast on non-auth errors from store
+  // Toast on store errors
   useEffect(() => {
     if (error) {
-      const isAuthError = /unauthorized|missing auth|pattern/i.test(error);
-      if (!isAuthError) {
-        showToast(error, 'error');
-      }
+      const isAuth = /unauthorized|missing auth|pattern/i.test(error);
+      if (!isAuth) showToast(error, 'error');
       clearError();
     }
   }, [error]);
 
-  // Telegram Back Button support
+  // Telegram Back Button
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
     if (!tg) return;
-
-    if (pageHistory.length > 0) {
-      tg.BackButton.show();
-    } else {
-      tg.BackButton.hide();
-    }
-
+    pageHistory.length > 0 ? tg.BackButton.show() : tg.BackButton.hide();
     const handleBack = () => navigateTo(-1);
     tg.BackButton.onClick(handleBack);
     return () => tg.BackButton.offClick(handleBack);
@@ -129,19 +72,21 @@ export default function App() {
 
   if (!initialized) return <LoadingScreen />;
 
-  // ── Page renderer ──────────────────────────────────────────────────────────
   const renderPage = () => {
+    const props = { onNavigate: navigateTo, onToast: showToast };
     switch (page) {
-      case 'groups':          return <GroupList       onNavigate={navigateTo} onToast={showToast} />;
-      case 'group-detail':    return <GroupDetail     onNavigate={navigateTo} onToast={showToast} />;
-      case 'add-expense':     return <AddExpense      onNavigate={navigateTo} onToast={showToast} />;
-      case 'settle':          return <SettleUp        onNavigate={navigateTo} onToast={showToast} />;
-      case 'wallet-settings': return <WalletSettings  onNavigate={navigateTo} onToast={showToast} />;
-      case 'create-group':    return <CreateGroup     onNavigate={navigateTo} onToast={showToast} />;
-      case 'join-group':      return <JoinGroup       onNavigate={navigateTo} onToast={showToast} />;
-      case 'pro':             return <ProUpgrade      onNavigate={navigateTo} onToast={showToast} />;
-      case 'analytics':       return <Analytics       onNavigate={navigateTo} onToast={showToast} />;
-      default:                return <GroupList       onNavigate={navigateTo} onToast={showToast} />;
+      case 'groups':          return <GroupList      {...props} />;
+      case 'group-detail':    return <GroupDetail    {...props} />;
+      case 'add-expense':     return <AddExpense     {...props} />;
+      case 'settle':          return <SettleUp       {...props} />;
+      // both 'wallet' and 'wallet-settings' go to the same page
+      case 'wallet':
+      case 'wallet-settings': return <WalletSettings {...props} />;
+      case 'create-group':    return <CreateGroup    {...props} />;
+      case 'join-group':      return <JoinGroup      {...props} />;
+      case 'pro':             return <ProUpgrade     {...props} />;
+      case 'analytics':       return <Analytics      {...props} />;
+      default:                return <GroupList      {...props} />;
     }
   };
 
@@ -150,7 +95,12 @@ export default function App() {
       <main className="page-content">
         {renderPage()}
       </main>
-      <BottomNav currentPage={page} onNavigate={navigateTo} />
+      {/* Pass currentPage (not current) — BottomNav reads currentPage prop */}
+      <BottomNav
+        currentPage={page}
+        onNavigate={navigateTo}
+        paymentStatus={paymentStatus}
+      />
       {toast && (
         <Toast
           key={toast.key}

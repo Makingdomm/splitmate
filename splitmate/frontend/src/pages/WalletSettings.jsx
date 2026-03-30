@@ -74,7 +74,7 @@ export default function WalletSettings({ onNavigate, onToast }) {
 
       {/* ── Header — spec §2.11 ── */}
       <div className="page-header">
-        <button className="btn-icon" onClick={() => onNavigate('groups')} style={{ fontSize:20, background:'#F5F5F5' }}>‹</button>
+        <button className="btn-icon" onClick={() => onNavigate(-1)} style={{ fontSize:20, background:'#F5F5F5' }}>‹</button>
         <div style={{ flex:1 }}>
           <div className="page-header-title">My Wallets</div>
           <div className="page-header-sub">Others see these when settling up</div>
