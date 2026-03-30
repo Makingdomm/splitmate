@@ -4,7 +4,7 @@
 // =============================================================================
 
 import { supabase } from '../db/client.js';
-import { addExpense, getGroupMembers } from './expenseService.js';
+import { addExpense } from './expenseService.js';
 import { getGroupMembers as getMembers } from './groupService.js';
 import { notifyNewExpense } from './notificationService.js';
 

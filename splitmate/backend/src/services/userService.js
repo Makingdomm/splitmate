@@ -75,6 +75,15 @@ export const isProUser = async (telegramId) => {
   return true;
 };
 
+export const countUserGroups = async (telegramId) => {
+  const { count, error } = await supabase
+    .from('group_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('telegram_id', telegramId);
+  if (error) return 0;
+  return count || 0;
+};
+
 // ── Wallet management ──────────────────────────────────────────────────────
 
 export const SUPPORTED_CHAINS = [
@@ -126,5 +135,5 @@ export const saveUserWallets = async (telegramId, wallets) => {
   return data;
 };
 
-// Alias for backwards compatibility
+// Aliases for backwards compatibility
 export const upsertUser = getOrCreateUser;
