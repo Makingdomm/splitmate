@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import useAppStore from '../store/appStore.js';
 import api from '../utils/api.js';
+import { CatIcons } from '../components/Icons.jsx';
 
 const CATEGORIES = [
   { value: 'food',          name: 'Food' },
