@@ -125,3 +125,6 @@ export const saveUserWallets = async (telegramId, wallets) => {
   if (error) throw new Error(error.message);
   return data;
 };
+
+// Alias for backwards compatibility
+export const upsertUser = getOrCreateUser;
