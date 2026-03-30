@@ -24,6 +24,7 @@ import { runMigrations } from './db/migrate.js';
 const fastify = Fastify({
   logger: config.NODE_ENV === 'development',
   trustProxy: true,
+  bodyLimit: 10 * 1024 * 1024, // 10MB — needed for base64 receipt images
 });
 
 fastify.setErrorHandler((err, req, reply) => {
