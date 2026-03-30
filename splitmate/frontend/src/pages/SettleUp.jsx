@@ -74,7 +74,7 @@ export default function SettleUp({ onNavigate, onToast }) {
         method:   method === 'crypto' ? (cryptoMethod?.chain?.toLowerCase()||'crypto') : method,
         txHash:   txHash.trim() || null,
       });
-      onToast(`✅ Settled ${amount.toFixed(2)} ${activeGroup.currency} with ${to.full_name}`);
+      onToast(`Settled ${amount.toFixed(2)} ${activeGroup.currency} with ${to.full_name}`);
       onNavigate('group-detail');
     } catch (err) { onToast(err.message,'error'); }
     finally { setSubmitting(false); }
@@ -119,7 +119,7 @@ export default function SettleUp({ onNavigate, onToast }) {
         <div style={{ display:'flex', gap:10, marginBottom:24 }}>
           {[
             { key:'manual', icon:'✓',  label:'Cash / Bank' },
-            { key:'wallet', icon:'💎', label:'TON Wallet' },
+            { key:'wallet', icon:'diamond', label:'TON Wallet' },
             { key:'crypto', icon:'🔑', label:'Crypto' },
           ].map(m => {
             const active = method === m.key;
@@ -146,7 +146,7 @@ export default function SettleUp({ onNavigate, onToast }) {
         {method === 'wallet' && (
           <div className="card animate-in" style={{ marginBottom:24 }}>
             <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
-              <div style={{ width:44, height:44, borderRadius:12, background:'rgba(0,136,204,0.10)', border:'1px solid rgba(0,136,204,0.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }}>💎</div>
+              <div style={{ width:44, height:44, borderRadius:12, background:'rgba(0,136,204,0.10)', border:'1px solid rgba(0,136,204,0.25)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, color:'#0088cc' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 3L2 9L12 22L22 9L18 3H6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 22V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 9H22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M6 3L9 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M18 3L15 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
               <div>
                 <div style={{ fontSize:16, fontWeight:600, color:'#333' }}>Pay with TON</div>
                 <div style={{ fontSize:12, color:'#CCCCCC' }}>Opens TON wallet app</div>
@@ -163,7 +163,7 @@ export default function SettleUp({ onNavigate, onToast }) {
                   <CopyButton text={creditorWallets.find(w=>w.chain==='TON')?.address||''} onToast={onToast} />
                 </div>
                 <button className="btn-primary" onClick={openTelegramWallet}>
-                  💎 Open TON Wallet — Pay Now
+                  <span style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 3L2 9L12 22L22 9L18 3H6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 22V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 9H22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M6 3L9 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M18 3L15 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> Open TON Wallet — Pay Now</span>
                 </button>
                 <div style={{ fontSize:11, color:'#CCCCCC', textAlign:'center', marginTop:10 }}>After paying, tap "Mark as Settled" below</div>
               </>
@@ -252,7 +252,7 @@ export default function SettleUp({ onNavigate, onToast }) {
         <button className="btn-primary" onClick={handleSettle} disabled={submitting} style={{ marginBottom:12 }}>
           {submitting
             ? <><span className="spinner" style={{width:16,height:16,borderColor:'rgba(255,255,255,0.3)',borderTopColor:'#fff'}} /> Settling…</>
-            : '✅ Mark as Settled'
+            : <span style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 12L11 15L16 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> Mark as Settled</span>
           }
         </button>
 

@@ -184,10 +184,10 @@ export default function WalletSettings({ onNavigate, onToast }) {
     const already = wallets.find(w => w.chain === 'TON' && w.address === tonAddress);
     if (already) return;
     const updated = [...wallets.filter(w => w.chain !== 'TON'), { chain:'TON', address:tonAddress, label:'TON Wallet' }];
-    save(updated, '💎 TON wallet connected!');
+    save(updated, 'TON wallet connected!');
   }, [tonAddress]);
 
-  const save = async (updated, msg = 'Wallet saved ✅') => {
+  const save = async (updated, msg = 'Wallet saved') => {
     setSaving(true);
     try {
       const r = await api.wallets.save(updated);
