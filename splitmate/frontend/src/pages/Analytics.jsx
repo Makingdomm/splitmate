@@ -83,6 +83,25 @@ function LineChart({ points, width=320, height=100 }) {
 function GlobalDashboard({ onNavigate, onToast, paymentStatus }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
+
+  const handleDeleteExpense = async (expenseId) => {
+    if (deletingId) return;
+    setDeletingId(expenseId);
+    try {
+      await api.expenses.delete(expenseId);
+      setData(prev => ({
+        ...prev,
+        recentExpenses: prev.recentExpenses.filter(e => e.id !== expenseId),
+        expenseCount: prev.expenseCount - 1,
+      }));
+      onToast('Expense deleted');
+    } catch (err) {
+      onToast(err.message || 'Delete failed', 'error');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     api.expenses.myAnalytics()
@@ -147,7 +166,9 @@ function GlobalDashboard({ onNavigate, onToast, paymentStatus }) {
                 <div style={{ fontSize:14, fontWeight:600, color:'#333', marginBottom:12 }}>By Category</div>
                 {data.categories.slice(0,5).map(cat => (
                   <div key={cat.name} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
-                    <div style={{ fontSize:18 }}>{CatIcons[cat.name] || CatIcons.other}</div>
+                    <div style={{ width:36, height:36, borderRadius:10, background:'#f0f3ea', display:'flex', alignItems:'center', justifyContent:'center', color:'#4B5320', flexShrink:0 }}>
+                    {(() => { const Icon = CatIcons[cat.name] || CatIcons.other; return <Icon />; })()}
+                  </div>
                     <div style={{ flex:1 }}>
                       <div style={{ display:'flex', justifyContent:'space-between', marginBottom:3 }}>
                         <span style={{ fontSize:13, fontWeight:500, color:'#333', textTransform:'capitalize' }}>{cat.name}</span>
@@ -169,7 +190,9 @@ function GlobalDashboard({ onNavigate, onToast, paymentStatus }) {
                 <div style={{ fontSize:14, fontWeight:600, color:'#333', marginBottom:12 }}>By Group</div>
                 {data.groups.map((g, i) => (
                   <div key={g.id} style={{ display:'flex', alignItems:'center', gap:10, marginBottom: i < data.groups.length-1 ? 12 : 0 }}>
-                    <div style={{ width:36, height:36, borderRadius:10, background:'#f0f3ea', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>👥</div>
+                    <div style={{ width:36, height:36, borderRadius:10, background:'#f0f3ea', display:'flex', alignItems:'center', justifyContent:'center', color:'#4B5320' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  </div>
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:14, fontWeight:500, color:'#333' }}>{g.name}</div>
                       <div style={{ fontSize:12, color:'#aaa' }}>{g.count} expense{g.count !== 1 ? 's' : ''}</div>
@@ -186,12 +209,23 @@ function GlobalDashboard({ onNavigate, onToast, paymentStatus }) {
                 <div style={{ fontSize:14, fontWeight:600, color:'#333', marginBottom:12 }}>Recent Activity</div>
                 {data.recentExpenses.map((e, i) => (
                   <div key={e.id} style={{ display:'flex', alignItems:'center', gap:10, marginBottom: i < data.recentExpenses.length-1 ? 12 : 0 }}>
-                    <div style={{ fontSize:20 }}>{CatIcons[e.category] || CatIcons.other}</div>
+                    <div style={{ width:36, height:36, borderRadius:10, background:'#f0f3ea', display:'flex', alignItems:'center', justifyContent:'center', color:'#4B5320', flexShrink:0 }}>
+                    {(() => { const Icon = CatIcons[e.category] || CatIcons.other; return <Icon />; })()}
+                  </div>
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:14, fontWeight:500, color:'#333' }}>{e.description}</div>
                       <div style={{ fontSize:12, color:'#aaa' }}>{e.group_name} · {e.paid_by}</div>
                     </div>
-                    <div style={{ fontSize:14, fontWeight:600, color:'#4B5320' }}>${(e.amount_usd||0).toFixed(0)}</div>
+                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      <div style={{ fontSize:14, fontWeight:600, color:'#4B5320' }}>${(e.amount_usd||0).toFixed(0)}</div>
+                      <button
+                        onClick={() => handleDeleteExpense(e.id)}
+                        disabled={deletingId === e.id}
+                        style={{ background:'none', border:'none', cursor:'pointer', padding:'4px', color:'#ccc', display:'flex', alignItems:'center', opacity: deletingId === e.id ? 0.4 : 1 }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
