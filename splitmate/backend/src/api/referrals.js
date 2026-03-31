@@ -6,8 +6,8 @@ export default async function referralRoutes(fastify) {
       const stats = await getReferralStats(req.user.telegram_id);
       return reply.send(stats);
     } catch (err) {
-      console.error('[referrals] GET /me error:', err.message);
-      return reply.code(500).send({ error: 'Failed to load referral info' });
+      console.error('[referrals] GET /me error:', err.message, '| user:', req.user?.telegram_id);
+      return reply.code(500).send({ error: err.message || 'Failed to load referral info' });
     }
   });
 
@@ -20,7 +20,7 @@ export default async function referralRoutes(fastify) {
       return reply.send({ success: true, message: 'Referral recorded! Your friend will earn a free month when you upgrade.' });
     } catch (err) {
       console.error('[referrals] POST /claim error:', err.message);
-      return reply.code(500).send({ error: 'Failed to claim referral' });
+      return reply.code(500).send({ error: err.message || 'Failed to claim referral' });
     }
   });
 }

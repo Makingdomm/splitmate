@@ -7,53 +7,65 @@ const generateCode = (telegramId) => {
 };
 
 export const getOrCreateReferralCode = async (telegramId) => {
-  const { data: user } = await supabase
-    .from('users').select('referral_code').eq('telegram_id', telegramId).single();
+  const { data: user, error: fetchErr } = await supabase
+    .from('users')
+    .select('referral_code')
+    .eq('telegram_id', telegramId)
+    .maybeSingle();                    // ← maybeSingle: returns null (not error) if no row
+
+  if (fetchErr) throw new Error(`DB fetch user: ${fetchErr.message}`);
   if (user?.referral_code) return user.referral_code;
 
+  // Generate unique code
   let code;
-  let attempts = 0;
-  while (attempts < 10) {
-    code = generateCode(telegramId);
+  for (let i = 0; i < 10; i++) {
+    const candidate = generateCode(telegramId);
     const { data: existing } = await supabase
-      .from('users').select('telegram_id').eq('referral_code', code).single();
-    if (!existing) break;
-    attempts++;
+      .from('users')
+      .select('telegram_id')
+      .eq('referral_code', candidate)
+      .maybeSingle();
+    if (!existing) { code = candidate; break; }
   }
-  await supabase.from('users').update({ referral_code: code }).eq('telegram_id', telegramId);
+  if (!code) throw new Error('Could not generate unique referral code');
+
+  const { error: updateErr } = await supabase
+    .from('users')
+    .update({ referral_code: code })
+    .eq('telegram_id', telegramId);
+
+  if (updateErr) throw new Error(`DB update referral_code: ${updateErr.message}`);
   return code;
 };
 
 export const getReferralStats = async (telegramId) => {
   const code = await getOrCreateReferralCode(telegramId);
 
-  const { count: totalCount } = await supabase
-    .from('referrals').select('*', { count: 'exact', head: true }).eq('referrer_id', telegramId);
-  const { count: successCount } = await supabase
-    .from('referrals').select('*', { count: 'exact', head: true })
-    .eq('referrer_id', telegramId).eq('status', 'rewarded');
-  const { count: pendingCount } = await supabase
-    .from('referrals').select('*', { count: 'exact', head: true })
-    .eq('referrer_id', telegramId).eq('status', 'pending');
+  const [{ count: total }, { count: rewarded }, { count: pending }] = await Promise.all([
+    supabase.from('referrals').select('*', { count: 'exact', head: true }).eq('referrer_id', telegramId),
+    supabase.from('referrals').select('*', { count: 'exact', head: true }).eq('referrer_id', telegramId).eq('status', 'rewarded'),
+    supabase.from('referrals').select('*', { count: 'exact', head: true }).eq('referrer_id', telegramId).eq('status', 'pending'),
+  ]);
 
   return {
     referral_code: code,
-    total_referrals: totalCount || 0,
-    successful_referrals: successCount || 0,
-    pending_referrals: pendingCount || 0,
-    free_months_earned: successCount || 0,
+    total_referrals: total || 0,
+    successful_referrals: rewarded || 0,
+    pending_referrals: pending || 0,
+    free_months_earned: rewarded || 0,
   };
 };
 
 export const recordReferral = async (newUserTelegramId, referralCode) => {
   if (!referralCode) return null;
+
   const { data: referrer } = await supabase
-    .from('users').select('telegram_id').eq('referral_code', referralCode).single();
+    .from('users').select('telegram_id').eq('referral_code', referralCode).maybeSingle();
   if (!referrer) return null;
   if (referrer.telegram_id === newUserTelegramId) return null;
 
   const { data: existing } = await supabase
-    .from('referrals').select('id').eq('referred_id', newUserTelegramId).single();
+    .from('referrals').select('id').eq('referred_id', newUserTelegramId).maybeSingle();
   if (existing) return null;
 
   const { data, error } = await supabase
@@ -69,7 +81,7 @@ export const recordReferral = async (newUserTelegramId, referralCode) => {
 export const grantReferralReward = async (referredTelegramId) => {
   const { data: referral } = await supabase
     .from('referrals').select('*')
-    .eq('referred_id', referredTelegramId).eq('status', 'pending').single();
+    .eq('referred_id', referredTelegramId).eq('status', 'pending').maybeSingle();
   if (!referral) return null;
 
   await supabase.from('referrals')
@@ -78,7 +90,7 @@ export const grantReferralReward = async (referredTelegramId) => {
 
   const { data: referrer } = await supabase
     .from('users').select('pro_status, pro_expires_at, pro_tier')
-    .eq('telegram_id', referral.referrer_id).single();
+    .eq('telegram_id', referral.referrer_id).maybeSingle();
 
   const now = new Date();
   const base = referrer?.pro_status && referrer?.pro_expires_at && new Date(referrer.pro_expires_at) > now
