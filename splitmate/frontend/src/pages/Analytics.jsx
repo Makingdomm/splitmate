@@ -90,15 +90,24 @@ function GlobalDashboard({ onNavigate, onToast, paymentStatus, hideHeader }) {
     if (deletingGroupId) return;
     setDeletingGroupId(groupId);
     try {
-      await api.groups.delete(groupId);
+      // Try admin delete first; if forbidden, fall back to leaving the group
+      try {
+        await api.groups.delete(groupId);
+      } catch (e) {
+        if (e.message?.includes('403') || e.message?.toLowerCase().includes('forbidden') || e.message?.toLowerCase().includes('admin')) {
+          await api.groups.leave(groupId);
+        } else {
+          throw e;
+        }
+      }
       setData(prev => ({
         ...prev,
         groups: prev.groups.filter(g => g.id !== groupId),
-        groupCount: prev.groupCount - 1,
+        groupCount: (prev.groupCount || 1) - 1,
       }));
       onToast('Group removed');
     } catch (err) {
-      onToast(err.message || 'Delete failed', 'error');
+      onToast(err.message || 'Remove failed', 'error');
     } finally {
       setDeletingGroupId(null);
     }
@@ -506,8 +515,7 @@ export default function Analytics({ onNavigate, onToast }) {
           </button>
           <button
             onClick={() => setScope('group')}
-            disabled={!activeGroup}
-            style={{ flex:1, padding:'9px 0', border:'none', borderRadius:10, fontSize:13, fontWeight:600, cursor: activeGroup ? 'pointer' : 'not-allowed', background: scope==='group' ? '#4B5320' : 'transparent', color: scope==='group' ? '#fff' : activeGroup ? '#6B7B3A' : '#bbb', transition:'all 0.2s' }}
+            style={{ flex:1, padding:'9px 0', border:'none', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer', background: scope==='group' ? '#4B5320' : 'transparent', color: scope==='group' ? '#fff' : '#6B7B3A', transition:'all 0.2s' }}
           >
             <span style={{ display:'flex', alignItems:'center', gap:6, justifyContent:'center' }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -519,7 +527,18 @@ export default function Analytics({ onNavigate, onToast }) {
 
       {scope === 'account'
         ? <GlobalDashboard onNavigate={onNavigate} onToast={onToast} paymentStatus={paymentStatus} hideHeader />
-        : <GroupAnalytics activeGroup={activeGroup} onNavigate={onNavigate} onToast={onToast} paymentStatus={paymentStatus} hideHeader />
+        : activeGroup
+          ? <GroupAnalytics activeGroup={activeGroup} onNavigate={onNavigate} onToast={onToast} paymentStatus={paymentStatus} hideHeader />
+          : (
+            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'60px 24px', gap:12, textAlign:'center' }}>
+              <div style={{ width:48, height:48, borderRadius:14, background:'#f0f3ea', display:'flex', alignItems:'center', justifyContent:'center', color:'#4B5320' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+              <div style={{ fontSize:16, fontWeight:700, color:'#333' }}>No group selected</div>
+              <div style={{ fontSize:13, color:'#888', lineHeight:'20px' }}>Open a group first, then come back to see group analytics.</div>
+              <button className="btn-primary" onClick={() => onNavigate('groups')} style={{ marginTop:8 }}>Go to Groups</button>
+            </div>
+          )
       }
     </div>
   );

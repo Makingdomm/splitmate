@@ -135,4 +135,20 @@ export default async function groupRoutes(fastify) {
     }
   });
 
+
+  // ── POST /api/groups/:id/leave — Leave group (non-admin members) ──────────
+  fastify.post('/:id/leave', async (req, reply) => {
+    try {
+      const { error } = await supabase
+        .from('group_members')
+        .delete()
+        .eq('group_id', req.params.id)
+        .eq('user_id', req.user.telegram_id);
+      if (error) return reply.code(500).send({ error: error.message });
+      return { success: true };
+    } catch (err) {
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
 }

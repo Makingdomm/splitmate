@@ -34,6 +34,7 @@ export const api = {
     join:     (inviteCode) => request('POST',   '/api/groups/join', { inviteCode }),
     preview:  (code)       => request('GET',    `/api/groups/invite/${code}`),
     delete:   (id)         => request('DELETE', `/api/groups/${id}`),
+    leave:    (id)         => request('POST', `/api/groups/${id}/leave`),
   },
   expenses: {
     list:      (groupId, limit, offset) => request('GET', `/api/expenses/${groupId}?limit=${limit}&offset=${offset}`),

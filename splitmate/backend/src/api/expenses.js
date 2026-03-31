@@ -271,8 +271,9 @@ export default async function expenseRoutes(fastify) {
     // Get all groups the user is a member of
     const { data: memberships, error: memErr } = await supabase
       .from('group_members')
-      .select('group_id, groups(id, name, currency)')
-      .eq('user_id', telegramId);
+      .select('group_id, groups!inner(id, name, currency, is_active)')
+      .eq('user_id', telegramId)
+      .eq('groups.is_active', true);
 
     if (memErr) return reply.code(500).send({ error: 'Failed to fetch groups' });
 
