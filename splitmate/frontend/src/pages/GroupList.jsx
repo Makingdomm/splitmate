@@ -38,7 +38,7 @@ export default function GroupList({ onNavigate, onToast }) {
           <div>
             {/* Display — 32px bold #333 */}
             <div style={{ fontSize: 24, fontWeight: 700, lineHeight: '32px', color: '#333333', marginBottom: 2 }}>
-              Hi, {user?.first_name || user?.username || 'there'} 👋
+              <span style={{display:'flex',alignItems:'center',gap:6}}>Hi, {user?.first_name || user?.username || 'there'} <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20l-3-3H2V7l5-5 5 5 5-5 5 5v13h-8l-3 3z"/><path d="M17 10l-5 5-5-5"/></svg></span>
             </div>
             {/* Body Medium — 14px regular #CCCCCC */}
             <div style={{ fontSize: 14, color: '#CCCCCC', lineHeight: '20px' }}>Welcome Back!</div>

@@ -119,7 +119,7 @@ export default function ReferEarn({ onNavigate }) {
             )}
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={handleCopy} style={{ flex: 1, padding: '13px 0', borderRadius: 12, border: 'none', background: copied ? '#34C759' : '#f0f0f0', color: copied ? '#fff' : '#333', fontSize: 15, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}>
-                {copied ? '✅ Copied!' : '📋 Copy link'}
+                {copied ? '✅ Copied!' : <span style={{display:'flex',alignItems:'center',gap:6}}><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 2v4"/><path d="M8 2h8"/><path d="M9 12h6"/><path d="M9 16h6"/></svg> Copy link</span>}
               </button>
               <button onClick={handleShare} style={{ flex: 1, padding: '13px 0', borderRadius: 12, border: 'none', background: '#4a7c59', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
                 📤 Share

@@ -202,7 +202,7 @@ export default function GroupDetail({ onNavigate, onToast }) {
 
         {/* ── Tabs ── */}
         <div className="tabs" style={{ marginBottom: 16 }}>
-          <button className={`tab ${tab === 'expenses' ? 'active' : ''}`} onClick={() => setTab('expenses')}>📋 Expenses</button>
+          <button className={`tab ${tab === 'expenses' ? 'active' : ''}`} onClick={() => setTab('expenses')}><span style={{display:"flex",alignItems:"center",gap:4}}><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 2v4"/><path d="M8 2h8"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>Expenses</span></button>
           <button className={`tab ${tab === 'balances' ? 'active' : ''}`} onClick={() => setTab('balances')}>⚖️ Balances</button>
         </div>
 
@@ -275,7 +275,7 @@ export default function GroupDetail({ onNavigate, onToast }) {
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
                           }}
                         >
-                          💬{commentCount > 0 && <span style={{ fontSize: 9, fontWeight: 700 }}>{commentCount}</span>}
+                          <span style={{display:"flex",alignItems:"center",gap:2}}><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/><line x1="12" y1="11" x2="12" y2="11"/><line x1="16" y1="11" x2="16" y2="11"/><line x1="8" y1="11" x2="8" y2="11"/></svg></span>{commentCount > 0 && <span style={{ fontSize: 9, fontWeight: 700 }}>{commentCount}</span>}
                         </button>
                         {iPaid && (
                           <button onClick={() => handleDelete(exp.id)} style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid rgba(220,53,69,0.3)', background: 'rgba(220,53,69,0.06)', color: '#DC3545', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
