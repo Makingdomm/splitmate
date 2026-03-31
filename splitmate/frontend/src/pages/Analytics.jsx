@@ -1,6 +1,6 @@
 // Analytics.jsx — global account view + per-group view
 import React, { useState, useEffect } from 'react';
-import { CatIcons } from '../components/Icons.jsx';
+import { CatIcons, BarChartIcon, SparkleIcon, GroupsIcon } from '../components/Icons.jsx';
 import useAppStore from '../store/appStore.js';
 import api from '../utils/api.js';
 
@@ -156,7 +156,9 @@ function GlobalDashboard({ onNavigate, onToast, paymentStatus, hideHeader }) {
 
         {noData ? (
           <div style={{ background:'#fff', borderRadius:16, padding:'40px 24px', textAlign:'center', boxShadow:'0 1px 4px rgba(0,0,0,0.07)' }}>
-            <div style={{ fontSize:40, marginBottom:12 }}>📊</div>
+            <div style={{ width:56, height:56, borderRadius:16, background:'#f0f3ea', display:'flex', alignItems:'center', justifyContent:'center', color:'#4B5320', marginBottom:12 }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            </div>
             <div style={{ fontSize:18, fontWeight:700, color:'#333', marginBottom:8 }}>No expenses yet</div>
             <div style={{ fontSize:14, color:'#aaa', marginBottom:20 }}>Add expenses to a group to see your analytics here.</div>
             <button className="btn-primary" onClick={() => onNavigate('groups')}>Go to Groups</button>
@@ -264,7 +266,9 @@ function GlobalDashboard({ onNavigate, onToast, paymentStatus, hideHeader }) {
             {/* Pro upsell if not pro */}
             {!isPro && (
               <div style={{ background:'linear-gradient(135deg, #4B5320, #6B7B3A)', borderRadius:16, padding:'20px', textAlign:'center', marginBottom:8 }}>
-                <div style={{ fontSize:16, fontWeight:700, color:'#fff', marginBottom:6 }}>✨ Unlock Full Analytics</div>
+                <div style={{ fontSize:16, fontWeight:700, color:'#fff', marginBottom:6, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                  <SparkleIcon /> Unlock Full Analytics
+                </div>
                 <div style={{ fontSize:13, color:'rgba(255,255,255,0.8)', marginBottom:16 }}>Per-group breakdowns, member summaries & spending trends</div>
                 <button onClick={() => onNavigate('pro')} style={{ background:'#fff', color:'#4B5320', border:'none', borderRadius:10, padding:'10px 24px', fontSize:14, fontWeight:700, cursor:'pointer' }}>Upgrade to Pro</button>
               </div>
@@ -331,10 +335,14 @@ function GroupAnalytics({ activeGroup, onNavigate, onToast, paymentStatus, hideH
           </div>
         )}
         <div style={{ padding:'48px 24px', textAlign:'center' }}>
-          <div style={{ fontSize:40, marginBottom:16 }}>📊</div>
+          <div style={{ width:56, height:56, borderRadius:16, background:'#f0f3ea', display:'flex', alignItems:'center', justifyContent:'center', color:'#4B5320', marginBottom:16 }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </div>
           <div style={{ fontSize:24, fontWeight:700, color:'#333', marginBottom:8 }}>Pro Feature</div>
           <div style={{ fontSize:16, color:'#aaa', lineHeight:'24px', marginBottom:32 }}>Spending analytics, category breakdowns,<br/>member summaries & spending trends.</div>
-          <button className="btn-primary" onClick={() => onNavigate('pro')}>✨ Upgrade to Pro</button>
+          <button className="btn-primary" onClick={() => onNavigate('pro')} style={{ display:'flex', alignItems:'center', gap:8, justifyContent:'center' }}>
+            <SparkleIcon /> Upgrade to Pro
+          </button>
           <div style={{ fontSize:12, color:'#aaa', marginTop:12 }}>Cheaper than Splitwise · Cancel anytime</div>
         </div>
       </div>
@@ -482,14 +490,20 @@ export default function Analytics({ onNavigate, onToast }) {
             onClick={() => setScope('account')}
             style={{ flex:1, padding:'9px 0', border:'none', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer', background: scope==='account' ? '#4B5320' : 'transparent', color: scope==='account' ? '#fff' : '#6B7B3A', transition:'all 0.2s' }}
           >
-            📊 My Account
+            <span style={{ display:'flex', alignItems:'center', gap:6, justifyContent:'center' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              My Account
+            </span>
           </button>
           <button
             onClick={() => setScope('group')}
             disabled={!activeGroup}
             style={{ flex:1, padding:'9px 0', border:'none', borderRadius:10, fontSize:13, fontWeight:600, cursor: activeGroup ? 'pointer' : 'not-allowed', background: scope==='group' ? '#4B5320' : 'transparent', color: scope==='group' ? '#fff' : activeGroup ? '#6B7B3A' : '#bbb', transition:'all 0.2s' }}
           >
-            👥 {activeGroup ? activeGroup.name : 'Group'}
+            <span style={{ display:'flex', alignItems:'center', gap:6, justifyContent:'center' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              {activeGroup ? activeGroup.name : 'Group'}
+            </span>
           </button>
         </div>
       </div>
