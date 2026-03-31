@@ -1,6 +1,5 @@
 import React from 'react';
 
-// Onboarding loading state — spec §3.1 style
 export default function LoadingScreen() {
   return (
     <div style={{
@@ -8,14 +7,14 @@ export default function LoadingScreen() {
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       background: '#4B5320',
-      gap: 24,
+      gap: 20,
       padding: '32px',
     }}>
-      {/* App logo */}
+      {/* Logo — transparent PNG, no white box */}
       <img
         src="/logo.png"
         alt="SplitMate"
-        style={{ width: 96, height: 96, borderRadius: 22, objectFit: 'cover', marginBottom: 8 }}
+        style={{ width: 110, height: 110, objectFit: 'contain', marginBottom: 4 }}
       />
 
       <div style={{ textAlign: 'center' }}>
