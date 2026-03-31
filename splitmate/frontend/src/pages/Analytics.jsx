@@ -80,7 +80,7 @@ function LineChart({ points, width=320, height=100 }) {
 }
 
 // ── Global Account Dashboard (no group selected) ─────────────────────────────
-function GlobalDashboard({ onNavigate, onToast, paymentStatus }) {
+function GlobalDashboard({ onNavigate, onToast, paymentStatus, hideHeader }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
@@ -144,9 +144,11 @@ function GlobalDashboard({ onNavigate, onToast, paymentStatus }) {
 
   return (
     <div style={{ minHeight:'100vh', background:'#F5F5F5', paddingBottom:32 }}>
-      <div className="page-header">
-        <div className="page-header-title">Analytics</div>
-      </div>
+      {!hideHeader && (
+        <div className="page-header">
+          <div className="page-header-title">Analytics</div>
+        </div>
+      )}
 
       <div style={{ padding:'16px 16px 0' }}>
         {/* Account overview label */}
@@ -275,7 +277,7 @@ function GlobalDashboard({ onNavigate, onToast, paymentStatus }) {
 }
 
 // ── Group-specific Analytics (existing, Pro only) ────────────────────────────
-function GroupAnalytics({ activeGroup, onNavigate, onToast, paymentStatus }) {
+function GroupAnalytics({ activeGroup, onNavigate, onToast, paymentStatus, hideHeader }) {
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab]         = useState('overview');
@@ -320,12 +322,14 @@ function GroupAnalytics({ activeGroup, onNavigate, onToast, paymentStatus }) {
   if (!paymentStatus?.isPro) {
     return (
       <div style={{ minHeight:'100vh', background:'#F5F5F5' }}>
-        <div className="page-header">
-          <button className="btn-icon" onClick={() => onNavigate('group-detail')} style={{ fontSize:20, background:'#F5F5F5' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#4B5320" strokeWidth="2"/><path d="M12 8L8 12L12 16" stroke="#4B5320" strokeWidth="2" strokeLinecap="round"/><path d="M16 12H8" stroke="#4B5320" strokeWidth="2" strokeLinecap="round"/></svg>
-          </button>
-          <div className="page-header-title">{activeGroup.name}</div>
-        </div>
+        {!hideHeader && (
+          <div className="page-header">
+            <button className="btn-icon" onClick={() => onNavigate('group-detail')} style={{ fontSize:20, background:'#F5F5F5' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#4B5320" strokeWidth="2"/><path d="M12 8L8 12L12 16" stroke="#4B5320" strokeWidth="2" strokeLinecap="round"/><path d="M16 12H8" stroke="#4B5320" strokeWidth="2" strokeLinecap="round"/></svg>
+            </button>
+            <div className="page-header-title">{activeGroup.name}</div>
+          </div>
+        )}
         <div style={{ padding:'48px 24px', textAlign:'center' }}>
           <div style={{ fontSize:40, marginBottom:16 }}>📊</div>
           <div style={{ fontSize:24, fontWeight:700, color:'#333', marginBottom:8 }}>Pro Feature</div>
@@ -356,15 +360,26 @@ function GroupAnalytics({ activeGroup, onNavigate, onToast, paymentStatus }) {
 
   return (
     <div style={{ minHeight:'100vh', background:'#F5F5F5', paddingBottom:32 }}>
-      <div className="page-header">
-        <button className="btn-icon" onClick={() => onNavigate('group-detail')} style={{ fontSize:20, background:'#F5F5F5' }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#4B5320" strokeWidth="2"/><path d="M12 8L8 12L12 16" stroke="#4B5320" strokeWidth="2" strokeLinecap="round"/><path d="M16 12H8" stroke="#4B5320" strokeWidth="2" strokeLinecap="round"/></svg>
-        </button>
-        <div className="page-header-title">{activeGroup.name}</div>
-        <button className="btn-icon" onClick={handleExport} title="Export CSV" style={{ background:'#F5F5F5' }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="#4B5320" strokeWidth="2" strokeLinecap="round"/><polyline points="7 10 12 15 17 10" stroke="#4B5320" strokeWidth="2" strokeLinecap="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="#4B5320" strokeWidth="2" strokeLinecap="round"/></svg>
-        </button>
-      </div>
+      {!hideHeader && (
+        <div className="page-header">
+          <button className="btn-icon" onClick={() => onNavigate('group-detail')} style={{ fontSize:20, background:'#F5F5F5' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#4B5320" strokeWidth="2"/><path d="M12 8L8 12L12 16" stroke="#4B5320" strokeWidth="2" strokeLinecap="round"/><path d="M16 12H8" stroke="#4B5320" strokeWidth="2" strokeLinecap="round"/></svg>
+          </button>
+          <div className="page-header-title">{activeGroup.name}</div>
+          <button className="btn-icon" onClick={handleExport} title="Export CSV" style={{ background:'#F5F5F5' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="#4B5320" strokeWidth="2" strokeLinecap="round"/><polyline points="7 10 12 15 17 10" stroke="#4B5320" strokeWidth="2" strokeLinecap="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="#4B5320" strokeWidth="2" strokeLinecap="round"/></svg>
+          </button>
+        </div>
+      )}
+
+      {/* Export button inline when header hidden */}
+      {hideHeader && (
+        <div style={{ display:'flex', justifyContent:'flex-end', padding:'8px 16px 0' }}>
+          <button className="btn-icon" onClick={handleExport} title="Export CSV" style={{ background:'#e8ede0', borderRadius:10, padding:'8px' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="#4B5320" strokeWidth="2" strokeLinecap="round"/><polyline points="7 10 12 15 17 10" stroke="#4B5320" strokeWidth="2" strokeLinecap="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="#4B5320" strokeWidth="2" strokeLinecap="round"/></svg>
+          </button>
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={{ display:'flex', gap:0, margin:'0 16px 16px', background:'#e8ede0', borderRadius:12, padding:3 }}>
@@ -450,10 +465,39 @@ function GroupAnalytics({ activeGroup, onNavigate, onToast, paymentStatus }) {
 // ── Main Analytics export ─────────────────────────────────────────────────────
 export default function Analytics({ onNavigate, onToast }) {
   const { activeGroup, paymentStatus } = useAppStore();
+  // Default to 'account'. If a group is active AND user navigated here from group, default to 'group'.
+  const [scope, setScope] = useState(activeGroup ? 'group' : 'account');
 
-  if (!activeGroup) {
-    return <GlobalDashboard onNavigate={onNavigate} onToast={onToast} paymentStatus={paymentStatus} />;
-  }
+  // Keep scope in sync if activeGroup changes (e.g. group deleted)
+  useEffect(() => {
+    if (!activeGroup && scope === 'group') setScope('account');
+  }, [activeGroup]);
 
-  return <GroupAnalytics activeGroup={activeGroup} onNavigate={onNavigate} onToast={onToast} paymentStatus={paymentStatus} />;
+  return (
+    <div style={{ minHeight:'100vh', background:'#F5F5F5' }}>
+      {/* Scope toggle — always visible */}
+      <div style={{ position:'sticky', top:0, zIndex:10, background:'#F5F5F5', paddingTop:8 }}>
+        <div style={{ display:'flex', gap:0, margin:'0 16px 0', background:'#e8ede0', borderRadius:12, padding:3 }}>
+          <button
+            onClick={() => setScope('account')}
+            style={{ flex:1, padding:'9px 0', border:'none', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer', background: scope==='account' ? '#4B5320' : 'transparent', color: scope==='account' ? '#fff' : '#6B7B3A', transition:'all 0.2s' }}
+          >
+            📊 My Account
+          </button>
+          <button
+            onClick={() => setScope('group')}
+            disabled={!activeGroup}
+            style={{ flex:1, padding:'9px 0', border:'none', borderRadius:10, fontSize:13, fontWeight:600, cursor: activeGroup ? 'pointer' : 'not-allowed', background: scope==='group' ? '#4B5320' : 'transparent', color: scope==='group' ? '#fff' : activeGroup ? '#6B7B3A' : '#bbb', transition:'all 0.2s' }}
+          >
+            👥 {activeGroup ? activeGroup.name : 'Group'}
+          </button>
+        </div>
+      </div>
+
+      {scope === 'account'
+        ? <GlobalDashboard onNavigate={onNavigate} onToast={onToast} paymentStatus={paymentStatus} hideHeader />
+        : <GroupAnalytics activeGroup={activeGroup} onNavigate={onNavigate} onToast={onToast} paymentStatus={paymentStatus} hideHeader />
+      }
+    </div>
+  );
 }
