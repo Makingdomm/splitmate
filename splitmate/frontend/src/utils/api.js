@@ -42,6 +42,7 @@ export const api = {
     delete:    (id)       => request('DELETE', `/api/expenses/${id}`),
     export:    (groupId)  => request('GET',    `/api/expenses/${groupId}/export`),
     analytics: (groupId)  => request('GET',    `/api/expenses/${groupId}/analytics`),
+    myAnalytics: ()        => request('GET',    '/api/expenses/my-analytics'),
     setRecurring: (id, data) => request('PATCH', `/api/expenses/${id}/recurring`, data),
   },
   comments: {

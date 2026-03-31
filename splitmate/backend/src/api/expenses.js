@@ -263,6 +263,121 @@ export default async function expenseRoutes(fastify) {
     return reply.send(csv);
   });
 
+
+  // ── GET /api/expenses/my-analytics — Global account analytics across all groups ──
+  fastify.get('/my-analytics', async (req, reply) => {
+    const telegramId = req.user.telegram_id;
+
+    // Get all groups the user is a member of
+    const { data: memberships, error: memErr } = await supabase
+      .from('group_members')
+      .select('group_id, groups(id, name, currency)')
+      .eq('user_id', telegramId);
+
+    if (memErr) return reply.code(500).send({ error: 'Failed to fetch groups' });
+
+    const groupIds = (memberships || []).map(m => m.group_id);
+    if (groupIds.length === 0) {
+      return { totalUsd: 0, youOweUsd: 0, owedToYouUsd: 0, expenseCount: 0, groupCount: 0, categories: [], groups: [], recentExpenses: [] };
+    }
+
+    // Fetch all expenses across all groups
+    const { data: expenses, error: expErr } = await supabase
+      .from('expenses')
+      .select(`
+        id, description, amount, currency, amount_usd, category, created_at, group_id,
+        users!paid_by (id, telegram_id, full_name, username),
+        expense_splits (user_id, amount_owed, is_settled)
+      `)
+      .in('group_id', groupIds)
+      .order('created_at', { ascending: false });
+
+    if (expErr) return reply.code(500).send({ error: 'Failed to fetch expenses' });
+
+    const list = expenses || [];
+    const telegramIdStr = telegramId.toString();
+
+    // Total spent across all groups (all expenses)
+    const totalUsd = list.reduce((s, e) => s + (e.amount_usd || 0), 0);
+
+    // What user owes (unsettled splits where user is the debtor)
+    let youOweUsd = 0;
+    let owedToYouUsd = 0;
+    for (const e of list) {
+      const paidByMe = e.users?.telegram_id?.toString() === telegramIdStr;
+      for (const s of e.expense_splits || []) {
+        if (s.is_settled) continue;
+        if (s.user_id?.toString() === telegramIdStr && !paidByMe) {
+          youOweUsd += (s.amount_owed || 0);
+        }
+        if (paidByMe && s.user_id?.toString() !== telegramIdStr) {
+          owedToYouUsd += (s.amount_owed || 0);
+        }
+      }
+    }
+
+    // Category breakdown
+    const byCategory = {};
+    for (const e of list) {
+      const cat = e.category || 'other';
+      byCategory[cat] = (byCategory[cat] || 0) + (e.amount_usd || 0);
+    }
+    const categories = Object.entries(byCategory)
+      .map(([name, total]) => ({ name, total: +total.toFixed(2), pct: totalUsd > 0 ? +(total / totalUsd * 100).toFixed(1) : 0 }))
+      .sort((a, b) => b.total - a.total);
+
+    // Per-group summary
+    const groupMap = {};
+    for (const m of memberships || []) {
+      groupMap[m.group_id] = { id: m.group_id, name: m.groups?.name || 'Group', total: 0, count: 0 };
+    }
+    for (const e of list) {
+      if (groupMap[e.group_id]) {
+        groupMap[e.group_id].total += (e.amount_usd || 0);
+        groupMap[e.group_id].count++;
+      }
+    }
+    const groups = Object.values(groupMap)
+      .map(g => ({ ...g, total: +g.total.toFixed(2) }))
+      .sort((a, b) => b.total - a.total);
+
+    // Monthly spending timeline (last 6 months)
+    const byMonth = {};
+    for (const e of list) {
+      const d = new Date(e.created_at);
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      byMonth[key] = (byMonth[key] || 0) + (e.amount_usd || 0);
+    }
+    const timeline = Object.entries(byMonth)
+      .map(([month, total]) => ({ month, total: +total.toFixed(2) }))
+      .sort((a,b) => a.month.localeCompare(b.month))
+      .slice(-6);
+
+    // Recent 5 expenses
+    const recentExpenses = list.slice(0, 5).map(e => ({
+      id: e.id,
+      description: e.description,
+      amount_usd: e.amount_usd,
+      category: e.category || 'other',
+      created_at: e.created_at,
+      group_id: e.group_id,
+      group_name: groupMap[e.group_id]?.name || 'Group',
+      paid_by: e.users?.full_name || e.users?.username || 'Unknown',
+    }));
+
+    return {
+      totalUsd: +totalUsd.toFixed(2),
+      youOweUsd: +youOweUsd.toFixed(2),
+      owedToYouUsd: +owedToYouUsd.toFixed(2),
+      expenseCount: list.length,
+      groupCount: groupIds.length,
+      categories,
+      groups,
+      timeline,
+      recentExpenses,
+    };
+  });
+
   // ── GET /api/expenses/:groupId/analytics — Spending analytics (Pro only) ──
   fastify.get('/:groupId/analytics', async (req, reply) => {
     const { groupId } = req.params;
