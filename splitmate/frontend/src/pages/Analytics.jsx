@@ -321,7 +321,16 @@ function GroupAnalytics({ activeGroup, onNavigate, onToast, paymentStatus, hideH
       .then(d => { setData(d); setMonthIdx(d.timeline?.length - 1); })
       .catch(err => onToast(err.message || 'Failed to load analytics', 'error'))
       .finally(() => setLoading(false));
-  }, [activeGroup]);
+  }, [activeGroup, paymentStatus]);
+
+  // Still loading payment status — show spinner
+  if (paymentStatus === null) {
+    return (
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'60px 0' }}>
+        <div style={{ width:24, height:24, border:'3px solid #e0e0e0', borderTopColor:'#4B5320', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />
+      </div>
+    );
+  }
 
   if (!paymentStatus?.isPro) {
     return (
