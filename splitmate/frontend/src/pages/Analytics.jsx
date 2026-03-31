@@ -95,6 +95,39 @@ export default function Analytics({ onNavigate, onToast }) {
   const [tab, setTab]         = useState('overview');
   const [monthIdx, setMonthIdx] = useState(null);
 
+  const handleExport = async () => {
+    try {
+      const API   = import.meta.env.VITE_API_URL || 'https://splitmate-production-9382.up.railway.app';
+      const token = window.Telegram?.WebApp?.initData || '';
+      if (!token) { onToast('Open in Telegram to export', 'error'); return; }
+      const resp = await fetch(`${API}/api/expenses/${activeGroup.id}/export`, { headers: { 'x-telegram-init-data': token } });
+      if (!resp.ok) throw new Error('Export failed');
+      const blob = await resp.blob();
+      if (navigator.share && navigator.canShare) {
+        const file = new File([blob], `splitmate-${activeGroup.name.replace(/[^a-z0-9]/gi, '-')}.csv`, { type: 'text/csv' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: `${activeGroup.name} expenses` });
+          onToast('CSV shared! 📤');
+          return;
+        }
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (window.Telegram?.WebApp?.openLink) {
+          window.Telegram.WebApp.openLink(reader.result);
+        } else {
+          const a = document.createElement('a'); a.href = reader.result;
+          a.download = `splitmate-${activeGroup.name.replace(/[^a-z0-9]/gi, '-')}.csv`;
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        }
+      };
+      reader.readAsDataURL(blob);
+      onToast('CSV ready! 📋');
+    } catch (err) {
+      if (err.name !== 'AbortError') onToast(err.message, 'error');
+    }
+  };
+
   useEffect(() => {
     if (!activeGroup) return;
     if (!paymentStatus?.isPro) { setLoading(false); return; }
@@ -185,6 +218,9 @@ export default function Analytics({ onNavigate, onToast }) {
           <div className="page-header-title">Analytics</div>
           <div className="page-header-sub">{activeGroup.name}</div>
         </div>
+        <button className="btn-icon" onClick={handleExport} title="Export CSV" style={{ background:'#F5F5F5' }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 10L12 15L17 10" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 15V3" stroke="#4B5320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
       </div>
 
       <div style={{ padding:'24px 24px 0' }}>
