@@ -84,6 +84,25 @@ function GlobalDashboard({ onNavigate, onToast, paymentStatus }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
+  const [deletingGroupId, setDeletingGroupId] = useState(null);
+
+  const handleDeleteGroup = async (groupId) => {
+    if (deletingGroupId) return;
+    setDeletingGroupId(groupId);
+    try {
+      await api.groups.delete(groupId);
+      setData(prev => ({
+        ...prev,
+        groups: prev.groups.filter(g => g.id !== groupId),
+        groupCount: prev.groupCount - 1,
+      }));
+      onToast('Group removed');
+    } catch (err) {
+      onToast(err.message || 'Delete failed', 'error');
+    } finally {
+      setDeletingGroupId(null);
+    }
+  };
 
   const handleDeleteExpense = async (expenseId) => {
     if (deletingId) return;
@@ -197,7 +216,16 @@ function GlobalDashboard({ onNavigate, onToast, paymentStatus }) {
                       <div style={{ fontSize:14, fontWeight:500, color:'#333' }}>{g.name}</div>
                       <div style={{ fontSize:12, color:'#aaa' }}>{g.count} expense{g.count !== 1 ? 's' : ''}</div>
                     </div>
-                    <div style={{ fontSize:14, fontWeight:600, color:'#4B5320' }}>${g.total.toFixed(0)}</div>
+                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      <div style={{ fontSize:14, fontWeight:600, color:'#4B5320' }}>${g.total.toFixed(0)}</div>
+                      <button
+                        onClick={() => handleDeleteGroup(g.id)}
+                        disabled={deletingGroupId === g.id}
+                        style={{ background:'none', border:'none', cursor:'pointer', padding:'4px', color:'#ccc', display:'flex', alignItems:'center', opacity: deletingGroupId === g.id ? 0.4 : 1 }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

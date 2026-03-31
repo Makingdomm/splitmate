@@ -276,7 +276,9 @@ export default async function expenseRoutes(fastify) {
 
     if (memErr) return reply.code(500).send({ error: 'Failed to fetch groups' });
 
-    const groupIds = (memberships || []).map(m => m.group_id);
+    // Filter out memberships where the group was deleted (join returns null)
+    const validMemberships = (memberships || []).filter(m => m.groups && m.groups.id);
+    const groupIds = validMemberships.map(m => m.group_id);
     if (groupIds.length === 0) {
       return { totalUsd: 0, youOweUsd: 0, owedToYouUsd: 0, expenseCount: 0, groupCount: 0, categories: [], groups: [], recentExpenses: [] };
     }
@@ -328,7 +330,7 @@ export default async function expenseRoutes(fastify) {
 
     // Per-group summary
     const groupMap = {};
-    for (const m of memberships || []) {
+    for (const m of validMemberships) {
       groupMap[m.group_id] = { id: m.group_id, name: m.groups?.name || 'Group', total: 0, count: 0 };
     }
     for (const e of list) {
