@@ -182,7 +182,7 @@ export default function GroupDetail({ onNavigate, onToast }) {
 
         {/* ── Tabs ── */}
         <div className="tabs" style={{ marginBottom: 16 }}>
-          <button className={`tab ${tab === 'expenses' ? 'active' : ''}`} onClick={() => setTab('expenses')}><span style={{display:'flex',alignItems:'center',gap:5}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 2V22L7 20L10 22L13 20L16 22L19 20L22 22V2H4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 6H18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 10H18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 14H14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>Expenses</span></button>
+          <button className={`tab ${tab === 'expenses' ? 'active' : ''}`} onClick={() => setTab('expenses')}>📋 Expenses</button>
           <button className={`tab ${tab === 'balances' ? 'active' : ''}`} onClick={() => setTab('balances')}>⚖️ Balances</button>
         </div>
 
