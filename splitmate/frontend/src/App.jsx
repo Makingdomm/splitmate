@@ -9,6 +9,7 @@ import ProUpgrade     from './pages/ProUpgrade.jsx';
 import CreateGroup    from './pages/CreateGroup.jsx';
 import JoinGroup      from './pages/JoinGroup.jsx';
 import Analytics      from './pages/Analytics.jsx';
+import ReferEarn      from './pages/ReferEarn.jsx';
 import BottomNav      from './components/BottomNav.jsx';
 import LoadingScreen  from './components/LoadingScreen.jsx';
 import Toast          from './components/Toast.jsx';
@@ -86,6 +87,7 @@ export default function App() {
       case 'join-group':      return <JoinGroup      {...props} />;
       case 'pro':             return <ProUpgrade     {...props} />;
       case 'analytics':       return <Analytics      {...props} />;
+      case 'refer':            return <ReferEarn      {...props} />;
       default:                return <GroupList      {...props} />;
     }
   };

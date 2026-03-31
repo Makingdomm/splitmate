@@ -1,5 +1,6 @@
 import { supabase } from '../db/client.js';
 import { activateProSubscription } from './userService.js';
+import { grantReferralReward } from './referralService.js';
 import { config } from '../config/index.js';
 
 // Use raw Telegram Bot API via fetch — avoids circular dependency with bot/commands.js
@@ -76,6 +77,21 @@ export const handleSuccessfulPayment = async (message) => {
   );
 
   await activateProSubscription(telegramId, isElite ? 'elite' : 'standard');
+
+  // Grant referral reward if this user was referred
+  try {
+    const reward = await grantReferralReward(telegramId);
+    if (reward) {
+      console.log(`🎁 Referral reward granted to user ${reward.referrer_id}`);
+      await tgApi('sendMessage', {
+        chat_id: reward.referrer_id,
+        text: `🎉 *Referral reward!*\n\nSomeone you referred just upgraded to SplitMate Pro.\nYou've earned *1 free month* of SplitMate Pro! 🙌`,
+        parse_mode: 'Markdown',
+      });
+    }
+  } catch (e) {
+    console.error('[referral reward] Error:', e.message);
+  }
 
   await tgApi('sendMessage', {
     chat_id: telegramId,

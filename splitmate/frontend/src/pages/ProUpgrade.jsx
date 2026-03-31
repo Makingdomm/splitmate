@@ -162,6 +162,18 @@ export default function ProUpgrade({ onNavigate }) {
           </button>
         )}
 
+        <div
+          onClick={() => onNavigate('refer')}
+          style={{ background: 'linear-gradient(135deg,#e8f5e9,#f0f9f0)', border: '1px solid #c8e6c9', borderRadius: 12, padding: '14px 16px', marginBottom: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}
+        >
+          <span style={{ fontSize: 24 }}>🎁</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: '#2d5a3d' }}>Refer & Earn Free Pro</div>
+            <div style={{ fontSize: 12, color: '#555', marginTop: 2 }}>Invite friends → earn 1 free month each</div>
+          </div>
+          <span style={{ color: '#4a7c59', fontSize: 20 }}>›</span>
+        </div>
+
         <div style={{ textAlign:'center', fontSize:12, color:'#CCCCCC' }}>
           Paid with Telegram Stars · Cancel anytime · No hidden fees
         </div>

@@ -15,6 +15,7 @@ import {
   normalizeTonAddress,
 } from '../services/tonService.js';
 import { activateProSubscription, isProUser } from '../services/userService.js';
+import { grantReferralReward } from '../services/referralService.js';
 import { supabase } from '../db/client.js';
 
 export default async function tonRoutes(fastify) {
@@ -107,6 +108,14 @@ export default async function tonRoutes(fastify) {
 
     // Payment confirmed! Activate Pro
     await activateProSubscription(req.user.telegram_id, pending.tier || 'standard');
+
+    // Grant referral reward if this user was referred
+    try {
+      const reward = await grantReferralReward(req.user.telegram_id);
+      if (reward) console.log(`🎁 TON referral reward granted to user ${reward.referrer_id}`);
+    } catch (e) {
+      console.error('[ton referral reward] Error:', e.message);
+    }
 
     // Mark payment as completed
     await supabase

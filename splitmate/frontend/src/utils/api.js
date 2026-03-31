@@ -63,6 +63,10 @@ export const api = {
     upgrade:    (starsAmount) => request('POST', '/api/payments/invoice', { starsAmount }),
     currencies: ()            => request('GET',  '/api/payments/currencies'),
   },
+  referrals: {
+    me:    ()     => request('GET',  '/api/referrals/me'),
+    claim: (code) => request('POST', '/api/referrals/claim', { referral_code: code }),
+  },
   ton: {
     price:     ()               => request('GET',  '/api/ton/price'),
     proLink:   (tier)           => request('POST', '/api/ton/pro-link', { tier }),
