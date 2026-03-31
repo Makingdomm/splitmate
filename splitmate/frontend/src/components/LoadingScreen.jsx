@@ -7,23 +7,18 @@ export default function LoadingScreen() {
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       background: '#4B5320',
-      gap: 20,
+      gap: 16,
       padding: '32px',
     }}>
-      {/* Logo — transparent PNG, no white box */}
+      {/* Full logo — transparent PNG, let it breathe */}
       <img
         src="/logo.png"
         alt="SplitMate"
-        style={{ width: 110, height: 110, objectFit: 'contain', marginBottom: 4 }}
+        style={{ width: 180, height: 180, objectFit: 'contain' }}
       />
 
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 32, fontWeight: 700, color: '#fff', lineHeight: '40px', marginBottom: 8 }}>
-          SplitMate
-        </div>
-        <div style={{ fontSize: 16, color: 'rgba(255,255,255,0.75)', lineHeight: '24px' }}>
-          Loading your groups…
-        </div>
+      <div style={{ fontSize: 16, color: 'rgba(255,255,255,0.75)', lineHeight: '24px' }}>
+        Loading your groups…
       </div>
 
       <div style={{
