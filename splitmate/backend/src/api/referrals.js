@@ -1,6 +1,17 @@
 import { getReferralStats, recordReferral } from '../services/referralService.js';
 
 export default async function referralRoutes(fastify) {
+  // DEBUG endpoint — remove after diagnosis
+  fastify.get('/debug/:telegramId', { config: { skipAuth: true } }, async (req, reply) => {
+    try {
+      const telegramId = parseInt(req.params.telegramId, 10);
+      const stats = await getReferralStats(telegramId);
+      return reply.send({ ok: true, stats });
+    } catch (err) {
+      return reply.code(500).send({ ok: false, error: err.message, stack: err.stack?.split('\n').slice(0,5) });
+    }
+  });
+
   fastify.get('/me', async (req, reply) => {
     try {
       const stats = await getReferralStats(req.user.telegram_id);
