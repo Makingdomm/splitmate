@@ -478,6 +478,8 @@ html, body {
   cursor: pointer; transition: all 0.15s;
   font-family: var(--font-family-primary);
   -webkit-tap-highlight-color: transparent;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  white-space: nowrap;
 }
 .tab.active {
   background: var(--color-white);
