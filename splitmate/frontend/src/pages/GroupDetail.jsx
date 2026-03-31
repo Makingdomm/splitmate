@@ -114,12 +114,32 @@ export default function GroupDetail({ onNavigate, onToast }) {
       const resp = await fetch(`${API}/api/expenses/${activeGroup.id}/export`, { headers: { 'x-telegram-init-data': token } });
       if (!resp.ok) throw new Error('Export failed');
       const blob = await resp.blob();
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a'); a.href = url;
-      a.download = `splitmate-${activeGroup.name.replace(/[^a-z0-9]/gi, '-')}.csv`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-      onToast('CSV downloaded!');
-    } catch (err) { onToast(err.message, 'error'); }
+      // Try native share sheet first (works on iOS Telegram)
+      if (navigator.share && navigator.canShare) {
+        const file = new File([blob], `splitmate-${activeGroup.name.replace(/[^a-z0-9]/gi, '-')}.csv`, { type: 'text/csv' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: `${activeGroup.name} expenses` });
+          onToast('CSV shared! 📤');
+          return;
+        }
+      }
+      // Fallback: open as data URL in Telegram browser
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result;
+        if (window.Telegram?.WebApp?.openLink) {
+          window.Telegram.WebApp.openLink(dataUrl);
+        } else {
+          const a = document.createElement('a'); a.href = dataUrl;
+          a.download = `splitmate-${activeGroup.name.replace(/[^a-z0-9]/gi, '-')}.csv`;
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        }
+      };
+      reader.readAsDataURL(blob);
+      onToast('CSV ready! 📋');
+    } catch (err) {
+      if (err.name !== 'AbortError') onToast(err.message, 'error');
+    }
   };
 
   const handleShare = () => {
